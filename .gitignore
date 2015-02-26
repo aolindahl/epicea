@@ -58,3 +58,6 @@ target/
 # Data folder
 h5_data/
 test_data/
+*figures
+*.pfd
+*.zip
