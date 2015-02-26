@@ -52,3 +52,9 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Project specific
+########################
+# Data folder
+h5_data/
+test_data/
