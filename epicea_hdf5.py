@@ -145,7 +145,7 @@ def particles_from_events(data, particles, events_filter=slice(None),
     particles_start_index = getattr(
         data.events, '{}_wave_index'.format(particles))[events_filter]
 
-    particles_mask = np.zeros(data.ions.event_id.shape, dtype=bool)
+    particles_mask = np.zeros(getattr(data, particles).len(), dtype=bool)
 
     # print 'Partickles start index:', particles_start_index.astype(int)
     # print 'Partickles number:', particles_number.astype(int)
@@ -348,6 +348,9 @@ class DataSet(object):
         for k in self._filters:
             print '\t{}'.format(k)
 
+    def get_filter_name_list(self):
+        return [k for k in self._filters]
+
     def get_filter(self, filter_name, filter_function=None,
                    filter_kw_params={}, update=False, verbose=None):
         """Return mask for previously made filter or make a new one."""
@@ -359,24 +362,24 @@ class DataSet(object):
         if (filter_name in self._filters) and (update is False):
             if verbose:
                 print 'Returning existing filter.'
-            return self._filters[filter_name]
+            return self._filters[filter_name].copy()
 
         if filter_function is None:
-            if self._verbose:
+            if verbose:
                 print ('If no filter function is given and the filter does' +
                        ' not exist, an exception is raised.')
             raise NameError('No filter named "{}"'.format(filter_name) +
                             ' created previously and no mask given.')
 
-        if self._verbose:
+        filter_kw_params['verbose'] = verbose
+        if verbose:
             print ('Construct the filter from the function {} with' +
                    ' kwyword parameters: {}.').format(filter_function,
                                                       filter_kw_params)
-        filter_kw_params['verbose'] = verbose
         self._filters[filter_name] = filter_function(self, **filter_kw_params)
         if self._verbose:
             print 'Return the filter mask.'
-        return self._filters[filter_name]
+        return self._filters[filter_name].copy()
 
     def get_events_filter(self, source, source_filter, logic='any'):
         """Return event maske based on ions or electrons mask."""
@@ -444,7 +447,7 @@ class DataSet(object):
             print 'Returning.'
         return hist
 
-    def get_i_image(self, x_axis_mm, y_axis_mm=None, ions_filter=None):
+    def get_i_xy_image(self, x_axis_mm, y_axis_mm=None, ions_filter=None):
         """Get the ion image based on ions_filter."""
         if self._verbose:
             print 'Get the has_position mask.'
@@ -458,16 +461,19 @@ class DataSet(object):
         else:
             ions_filter *= has_pos
 
+        if y_axis_mm is None:
+            y_axis_mm = x_axis_mm
+
         if self._verbose:
             print 'Calculate and return image histogram.'
         return center_histogram_2d(self.ions.pos_x[ions_filter],
                                    self.ions.pos_y[ions_filter],
                                    x_axis_mm, y_axis_mm)
 
-    def get_i_rt_image(self,
-                       r_axis_mm,
-                       t_axis_rad=np.linspace(0, 2*np.pi, 513)[1::2],
-                       ions_filter=None):
+    def get_i_rth_image(self,
+                        r_axis_mm,
+                        th_axis_rad=np.linspace(0, 2*np.pi, 513)[1::2],
+                        ions_filter=None):
         """Get the ions image in polar coordinates."""
         has_pos = self.get_filter('has_position_ions',
                                   ff_has_position_particles,
@@ -479,7 +485,48 @@ class DataSet(object):
 
         return center_histogram_2d(self.ions.pos_r[ions_filter],
                                    self.ions.pos_t[ions_filter],
-                                   r_axis_mm, t_axis_rad)
+                                   r_axis_mm, th_axis_rad)
+
+    def get_e_xy_image(self, x_axis_mm, y_axis_mm=None,
+                       electrons_filter=None):
+        """Get the electron image based on electrons_filter."""
+        if self._verbose:
+            print 'Get the has_position mask.'
+        has_pos = self.get_filter('has_position_electrons',
+                                  ff_has_position_particles,
+                                  {'particles': 'electrons'})
+        if self._verbose:
+            print 'Merge has_pos filter and any given electrons_filter.'
+        if electrons_filter is None:
+            electrons_filter = has_pos
+        else:
+            electrons_filter *= has_pos
+
+        if y_axis_mm is None:
+            y_axis_mm = x_axis_mm
+
+        if self._verbose:
+            print 'Calculate and return electons image histogram.'
+        return center_histogram_2d(self.electrons.pos_x[electrons_filter],
+                                   self.electrons.pos_y[electrons_filter],
+                                   x_axis_mm, y_axis_mm)
+
+    def get_e_rth_image(self,
+                        r_axis_mm,
+                        th_axis_rad=np.linspace(0, 2*np.pi, 513)[1::2],
+                        electrons_filter=None):
+        """Get the electrons image in polar coordinates."""
+        has_pos = self.get_filter('has_position_electrons',
+                                  ff_has_position_particles,
+                                  {'particles': 'electrons'})
+        if electrons_filter is None:
+            electrons_filter = has_pos
+        else:
+            electrons_filter *= has_pos
+
+        return center_histogram_2d(self.electrons.pos_r[electrons_filter],
+                                   self.electrons.pos_t[electrons_filter],
+                                   r_axis_mm, th_axis_rad)
 
 
 # Filter functions are defined below.
@@ -492,7 +539,21 @@ def ff_e_start_events(data, verbose=False):
 
 def ff_events_filtered_ions(data, events_filter_name, verbose=False):
     """Get ions mask base on predefined events filter."""
+    if verbose:
+        print 'Retrieving ions from events filter "{}".'.format(
+            events_filter_name)
     return data.get_ions_filter(data.get_filter(events_filter_name))
+
+
+def ff_events_filtered_electrons(data, events_filter_name, verbose=False):
+    """Get elecctrons mask base on predefined events filter."""
+    if verbose:
+        print 'Retrieving electrons from events filter "{}".'.format(
+            events_filter_name)
+    if events_filter_name not in data.get_filter_name_list():
+        raise NameError('Filter "{}" does not exist.'.format(
+            events_filter_name))
+    return data.get_electrons_filter(data.get_filter(events_filter_name))
 
 
 def ff_has_position_particles(data, particles, verbose=False):
@@ -526,6 +587,45 @@ def ff_num_ion_events(data, min_ions, max_ions=None, verbose=False):
         max_ions = min_ions
     num_ions = data.events.num_i.value
     return (min_ions <= num_ions) & (num_ions <= max_ions)
+
+
+def ff_two_ions_e_start_events(data, verbose=False):
+    # Get two ion e start filter
+    data.get_filter('two_ions_events', ff_num_ion_events,
+                    {'min_ions': 2, 'max_ions': 2},
+                    verbose=verbose)
+    data.get_filter('e_start_events', ff_e_start_events, verbose=verbose)
+    # Combine and return the filters
+    return ff_combine(data, ['two_ions_events', 'e_start_events'],
+                      verbose=verbose)
+
+
+def ff_two_ions_time_sum_events(data,
+                                t_sum_min_us=-np.inf,
+                                t_sum_max_us=np.inf,
+                                verbose=False):
+    two_ions_e_start_events = data.get_filter('two_ions_e_start_events',
+                                              ff_two_ions_e_start_events,
+                                              verbose=verbose)
+    two_ions_e_start_events_ions = data.get_filter(
+        'two_ions_e_start_events_ions',
+        ff_events_filtered_ions,
+        {'events_filter_name': 'two_ions_e_start_events'},
+        verbose=verbose)
+
+    time_sums = data.ions.tof_falling_edge[two_ions_e_start_events_ions]
+    time_sums = time_sums.reshape(-1, 2).sum(axis=1)
+    if verbose:
+        print 'time_sums =', time_sums
+    wanted_time_sums = ((t_sum_min_us*1e6 < time_sums) &
+                        (time_sums < t_sum_max_us*1e6))
+
+    mask = np.zeros_like(two_ions_e_start_events, dtype=bool)
+    partial_mask = np.zeros_like(wanted_time_sums, dtype=bool)
+    partial_mask[wanted_time_sums] = True
+    mask[two_ions_e_start_events] = partial_mask
+
+    return mask
 
 
 def ff_combine(data, filter_name_list, logic=np.all, verbose=False):
