@@ -69,6 +69,8 @@ def add_file_as_h5_group(h5_file, name, file_path, verbose=False):
         if verbose:
             print 'Group "{}" already exists.'.format(name)
         return h5_file[name]
+    elif file_path is None:
+        raise AttributeError('No raw data given and not an existing group.')
     if verbose:
         print 'Creating group "{}".'.format(name)
     group = h5_file.create_group(name)
@@ -310,26 +312,51 @@ class GroupContainer(object):
         self.pos_t[x < 0] += np.pi
         self.pos_t[(x > 0) & (y < 0)] += 2*np.pi
 
+    def add_parameter(self, name, data):
+        if len(data) != self.len():
+            raise IndexError('First dimension of new "data" must be the' +
+                             ' same size as the rest of the datasets.')
+
+        if name in self._group.keys():
+            ds = self._group[name]
+            if (ds.dtype != float) or (ds.shape != data.shape):
+                del self._group[name]
+            ds[:] = data
+
+        if name not in self._group.keys():
+            ds = self._group.create_dataset(name, dtype=float,
+                                            data=data)
+        setattr(self, name, ds)
+
+
 _GROUP_NAMES = ['electrons', 'ions', 'events']
 
 
 class DataSet(object):
-    def __init__(self, data_path, h5_path, verbose=False):
+    def __init__(self, data_name, h5_path, raw_data_path='', verbose=False):
         """Setup link to hdf5 file and its groups"""
-        self._data_path = data_path.rstrip('/')
+        self._data_path = raw_data_path.rstrip('/')
         self._h5_path = h5_path
+        self._name = data_name
         self._verbose = verbose
 
-        if verbose:
+        if self._verbose:
             print 'Open or create hdf5 file "{}".'.format(self._h5_path)
         self._h5_file = h5py.File(self._h5_path, mode='a')
 
-        for name in _GROUP_NAMES:
+        for group_name in _GROUP_NAMES:
+            if not os.path.exists(os.path.join(self._data_path,
+                                               '.'.join([group_name, 'txt']))):
+                if self._verbose:
+                    print 'No data file for {} in the folder "{}".'.format(
+                        group_name, self._data_path)
+                continue
             if verbose:
-                print 'Adding the group "{}" to the hd5f file.'.format(name)
-            setattr(self, name,
-                    GroupContainer(self._h5_file, data_path,
-                                   name, verbose=verbose))
+                print 'Adding the group "{}" to the hd5f file.'.format(
+                    group_name)
+            setattr(self, group_name,
+                    GroupContainer(self._h5_file, self._data_path,
+                                   group_name, verbose=self._verbose))
 
         self._filters = {}
 
@@ -339,6 +366,9 @@ class DataSet(object):
             print 'DataSet->destructor, closing hdf5 file "{}".'.format(
                 self._h5_file.filename)
         self._h5_file.close()
+
+    def name(self):
+        return self._name
 
     def list_filters(self):
         """Print a list of existing filters."""
@@ -488,14 +518,16 @@ class DataSet(object):
                                    r_axis_mm, th_axis_rad)
 
     def get_e_xy_image(self, x_axis_mm, y_axis_mm=None,
-                       electrons_filter=None):
+                       electrons_filter=None, verbose=None):
         """Get the electron image based on electrons_filter."""
-        if self._verbose:
+        if verbose is None:
+            verbose = self._verbose
+        if verbose:
             print 'Get the has_position mask.'
         has_pos = self.get_filter('has_position_electrons',
                                   ff_has_position_particles,
                                   {'particles': 'electrons'})
-        if self._verbose:
+        if verbose:
             print 'Merge has_pos filter and any given electrons_filter.'
         if electrons_filter is None:
             electrons_filter = has_pos
@@ -505,7 +537,7 @@ class DataSet(object):
         if y_axis_mm is None:
             y_axis_mm = x_axis_mm
 
-        if self._verbose:
+        if verbose:
             print 'Calculate and return electons image histogram.'
         return center_histogram_2d(self.electrons.pos_x[electrons_filter],
                                    self.electrons.pos_y[electrons_filter],
@@ -527,6 +559,61 @@ class DataSet(object):
         return center_histogram_2d(self.electrons.pos_r[electrons_filter],
                                    self.electrons.pos_t[electrons_filter],
                                    r_axis_mm, th_axis_rad)
+
+    def calculate_electron_energy(self, calibration):
+        """Add the electron energy to the datset.
+
+        The energy calibration should be given in the calibration object."""
+
+        energies, errors = calibration.get_energies(self.electrons.pos_r,
+                                                    self.electrons.pos_t)
+
+        self.electrons.add_parameter('energy', energies)
+
+
+class DataSetList(object):
+    def __init__(self):
+        self._dataset_list = []
+        self._name_index_dict = {}
+
+    def __iter__(self):
+        for data_set in self._dataset_list:
+            yield data_set
+
+    def __getitem__(self, name):
+        if isinstance(name, int):
+            if (0 <= name) and (name < len(self._dataset_list)):
+                return self._dataset_list[name]
+            raise IndexError('Index={} out of'.format(name) +
+                             ' bounds for lenght {} list'.format(
+                len(self._dataset_list)))
+        if name in self._name_index_dict:
+            return self._dataset_list[self._name_index_dict[name]]
+        raise IndexError('The data set list cannot be indexed with' +
+                         ' "{}", it is not a valid name.'.format(name))
+
+    def add_dataset(self, name, h5_path, raw_data_path='', verbose=False):
+        if name in self._name_index_dict:
+            print ('A data set with the name "{}" already in list.' +
+                   ' No action taken.').format(name)
+            return
+
+        self._dataset_list.append(DataSet(name, h5_path, raw_data_path,
+                                          verbose=verbose))
+        self._name_index_dict[name] = len(self._dataset_list) - 1
+
+    def keys(self):
+        return [k for k in self._name_index_dict]
+
+    def len(self):
+        return len(self._dataset_list)
+
+    def sort(self, reverse=False):
+        self._dataset_list.sort(key=(lambda dataset: dataset.name()),
+                                reverse=reverse)
+        name_list = [dataset.name() for dataset in self._dataset_list]
+        for i, name in enumerate(name_list):
+            self._name_index_dict[name] = i
 
 
 # Filter functions are defined below.
@@ -641,25 +728,31 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     plt.ion()
 
-    testData = None
-
-    folder = '../data/ExportedData/N2O_0029_KE373_hv430eV/'
-    h5_name = 'test_data/N20_430_high.h5'
     if not os.path.exists('test_data'):
         os.mkdir('test_data')
-    testData = DataSet(folder, h5_name, verbose=True)
+
+    if 'test_data_list' not in locals():
+        test_data_list = DataSetList()
+
+    test_data_list.add_dataset(
+        name='430_high',
+        h5_path='test_data/N20_430_high.h5',
+        # raw_data_path='../data/ExportedData/N2O_0029_KE373_hv430eV/',
+        verbose=True)
 
     tof_axis = np.linspace(0, 6.5e6, 0.01e6)
-    tof_hist = testData.get_i_tof_spectrum(tof_axis)
-    plt.figure('tof')
-    plt.clf()
-    plt.plot(tof_axis, tof_hist)
+    for test_data in test_data_list:
 
-    testData.get_filter('e_start_events', ff_e_start_events)
-    testData.get_filter('e_start_ions', ff_events_filtered_ions,
-                        {'events_filter_name': 'e_start_events'})
-#    e_start_events = testData.events.num_e.value > 0
-#    e_start_ions = testData.get_ions_filter(e_start_events)
-    tof_hist_e_start = testData.get_i_tof_spectrum(
-        tof_axis, testData.get_filter('e_start_ions'))
-    plt.plot(tof_axis, tof_hist_e_start)
+        tof_hist = test_data.get_i_tof_spectrum(tof_axis)
+        plt.figure('tof {}'.format(test_data.name()))
+        plt.clf()
+        plt.plot(tof_axis, tof_hist)
+
+        test_data.get_filter('e_start_events', ff_e_start_events)
+        test_data.get_filter('e_start_ions', ff_events_filtered_ions,
+                             {'events_filter_name': 'e_start_events'})
+    #    e_start_events = testData.events.num_e.value > 0
+    #    e_start_ions = testData.get_ions_filter(e_start_events)
+        tof_hist_e_start = test_data.get_i_tof_spectrum(
+            tof_axis, test_data.get_filter('e_start_ions'))
+        plt.plot(tof_axis, tof_hist_e_start)
