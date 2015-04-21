@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
+plt.ion()
+
 FONTSIZE = 10
 
 
