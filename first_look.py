@@ -7,125 +7,133 @@ Created on Fri Feb 13 12:03:56 2015
 
 import numpy as np
 import matplotlib.pyplot as plt
-plt.ion()
-# plt.tight_layout()
+import os.path
 
-import epicea_hdf5 as epicea
-import electron_calibration
 import plt_func
+if 'epicea' not in locals():
+    import epicea
 
-ION_VMI_X_OFFSET = 1.8
-ION_VMI_Y_OFFSET = -0.1
+plt.ion()
+
 ION_VMI_OFFSET = {}
-ION_VMI_OFFSET['430_high'] = np.array([1.8, -0.1])
-ION_VMI_OFFSET['412_high'] = np.array([1.8, -0.1])
-ION_VMI_OFFSET['430_mid'] = np.array([1.8, -0.1])
-ION_VMI_OFFSET['412_mid'] = np.array([1.8, -0.1])
-ION_VMI_OFFSET['430_low'] = np.array([-0.5, -0.1])
-ION_VMI_OFFSET['412_low'] = np.array([-0.5, -0.1])
-ION_VMI_OFFSET['560'] = np.array([1.8, -0.1])
+ION_VMI_OFFSET['430_373'] = np.array([1.8, -0.1])
+ION_VMI_OFFSET['412_373'] = np.array([1.8, -0.1])
+ION_VMI_OFFSET['430_366'] = np.array([1.8, -0.1])
+ION_VMI_OFFSET['412_366'] = np.array([1.8, -0.1])
+ION_VMI_OFFSET['430_357'] = np.array([-0.5, -0.1])
+ION_VMI_OFFSET['412_357'] = np.array([-0.5, -0.1])
+ION_VMI_OFFSET['560_500'] = np.array([1.8, -0.1])
 
-ELECTRON_X_OFFSET = -0.2
-ELECTRON_Y_OFFSET = -0.1
+#ELECTRON_OFFSET = {}
+#ELECTRON_OFFSET['430_373'] = np.array([-0.2, -0.1])
+#ELECTRON_OFFSET['412_373'] = np.array([-0.2, 0.1])
+#ELECTRON_OFFSET['430_366'] = np.array([1., -0.1])
+#ELECTRON_OFFSET['412_366'] = np.array([-0.2, 0.1])
+#ELECTRON_OFFSET['430_357'] = np.array([-0.2, -0.2])
+#ELECTRON_OFFSET['412_357'] = np.array([-0.2, -0.1])
+#ELECTRON_OFFSET['560_500'] = np.array([-0.2, -0.2])
 ELECTRON_OFFSET = {}
-ELECTRON_OFFSET['430_high'] = np.array([-0.2, -0.1])
-ELECTRON_OFFSET['412_high'] = np.array([-0.2, 0.1])
-ELECTRON_OFFSET['430_mid'] = np.array([1., -0.1])
-ELECTRON_OFFSET['412_mid'] = np.array([-0.2, 0.1])
-ELECTRON_OFFSET['430_low'] = np.array([-0.2, -0.2])
-ELECTRON_OFFSET['412_low'] = np.array([-0.2, -0.1])
-ELECTRON_OFFSET['560'] = np.array([-0.2, -0.2])
+ELECTRON_OFFSET['430_373'] = np.array([0, 0])
+ELECTRON_OFFSET['412_373'] = np.array([0, 0])
+ELECTRON_OFFSET['430_366'] = np.array([0, 0])
+ELECTRON_OFFSET['412_366'] = np.array([0, 0])
+ELECTRON_OFFSET['430_357'] = np.array([0, 0])
+ELECTRON_OFFSET['412_357'] = np.array([0, 0])
+ELECTRON_OFFSET['560_500'] = np.array([0, 0])
 
 NO_N_TIME_SUM_RANGE_US = {}
 NN_O_TIME_SUM_RANGE_US = {}
-NO_N_TIME_SUM_RANGE_US['430_high'] = np.array([8.59, 8.63])
-NN_O_TIME_SUM_RANGE_US['430_high'] = np.array([8.65, 8.70])
-NO_N_TIME_SUM_RANGE_US['412_high'] = np.array([8.59, 8.63])
-NN_O_TIME_SUM_RANGE_US['412_high'] = np.array([8.65, 8.70])
-NO_N_TIME_SUM_RANGE_US['430_mid'] = np.array([8.57, 8.61])
-NN_O_TIME_SUM_RANGE_US['430_mid'] = np.array([8.625, 8.675])
-NO_N_TIME_SUM_RANGE_US['412_mid'] = np.array([8.57, 8.61])
-NN_O_TIME_SUM_RANGE_US['412_mid'] = np.array([8.625, 8.675])
-NO_N_TIME_SUM_RANGE_US['430_low'] = np.array([8.585, 8.625])
-NN_O_TIME_SUM_RANGE_US['430_low'] = np.array([8.645, 8.695])
-NO_N_TIME_SUM_RANGE_US['412_low'] = np.array([8.59, 8.63])
-NN_O_TIME_SUM_RANGE_US['412_low'] = np.array([8.65, 8.70])
-NO_N_TIME_SUM_RANGE_US['560'] = np.array([8.57, 8.61])
-NN_O_TIME_SUM_RANGE_US['560'] = np.array([8.625, 8.675])
+NO_N_TIME_SUM_RANGE_US['430_373'] = np.array([8.59, 8.63])
+NN_O_TIME_SUM_RANGE_US['430_373'] = np.array([8.65, 8.70])
+NO_N_TIME_SUM_RANGE_US['412_373'] = np.array([8.59, 8.63])
+NN_O_TIME_SUM_RANGE_US['412_373'] = np.array([8.65, 8.70])
+NO_N_TIME_SUM_RANGE_US['430_366'] = np.array([8.57, 8.61])
+NN_O_TIME_SUM_RANGE_US['430_366'] = np.array([8.625, 8.675])
+NO_N_TIME_SUM_RANGE_US['412_366'] = np.array([8.57, 8.61])
+NN_O_TIME_SUM_RANGE_US['412_366'] = np.array([8.625, 8.675])
+NO_N_TIME_SUM_RANGE_US['430_357'] = np.array([8.585, 8.625])
+NN_O_TIME_SUM_RANGE_US['430_357'] = np.array([8.645, 8.695])
+NO_N_TIME_SUM_RANGE_US['412_357'] = np.array([8.59, 8.63])
+NN_O_TIME_SUM_RANGE_US['412_357'] = np.array([8.65, 8.70])
+NO_N_TIME_SUM_RANGE_US['560_500'] = np.array([8.57, 8.61])
+NN_O_TIME_SUM_RANGE_US['560_500'] = np.array([8.625, 8.675])
 
 ANGLE_CUT = 2.7
 
 # %%
 
 
-def make_filters(data):
+def make_filters(data, verbose=False):
     # Set up some event filters
-    data.get_filter('two_ions_events', epicea.ff_num_ion_events,
+    data.get_filter('two_ions_events', epicea.ff.num_ion_events,
                     {'min_ions': 2, 'max_ions': 2},
                     verbose=verbose)
-    data.get_filter('e_start_events', epicea.ff_e_start_events)
-    data.get_filter('rand_start_events', epicea.ff_invert,
+    data.get_filter('e_start_events', epicea.ff.e_start_events,
+                    verbose=verbose)
+    data.get_filter('rand_start_events', epicea.ff.invert,
                     {'filter_name': 'e_start_events'},
                     verbose=verbose)
-    data.get_filter('two_ion_e_start_events', epicea.ff_combine,
+    data.get_filter('two_ion_e_start_events', epicea.ff.combine,
                     {'filter_name_list':
                         ['two_ions_events', 'e_start_events']},
                     verbose=verbose)
-    data.get_filter('two_ion_rand_start_events', epicea.ff_combine,
+    data.get_filter('two_ion_rand_start_events', epicea.ff.combine,
                     {'filter_name_list':
                         ['two_ions_events', 'rand_start_events']},
                     verbose=verbose)
     data.get_filter('NN_O_events',
-                    epicea.ff_two_ions_time_sum_events,
+                    epicea.ff.two_ions_time_sum_events,
                     {'t_sum_min_us': NN_O_TIME_SUM_RANGE_US[data.name()][0],
                      't_sum_max_us': NN_O_TIME_SUM_RANGE_US[data.name()][1]},
                     verbose=verbose)
     data.get_filter('NO_N_events',
-                    epicea.ff_two_ions_time_sum_events,
+                    epicea.ff.two_ions_time_sum_events,
                     {'t_sum_min_us': NO_N_TIME_SUM_RANGE_US[data.name()][0],
                      't_sum_max_us': NO_N_TIME_SUM_RANGE_US[data.name()][1]},
                     verbose=verbose)
 
     # Ion filters
     data.get_filter('e_start_ions',
-                    epicea.ff_events_filtered_ions,
-                    {'events_filter_name': 'e_start_events'})
+                    epicea.ff.events_filtered_ions,
+                    {'events_filter_name': 'e_start_events'},
+                    verbose=verbose)
     data.get_filter('rand_start_ions',
-                    epicea.ff_events_filtered_ions,
-                    {'events_filter_name': 'rand_start_events'})
+                    epicea.ff.events_filtered_ions,
+                    {'events_filter_name': 'rand_start_events'},
+                    verbose=verbose)
     data.get_filter('two_ions_events_ions',
-                    epicea.ff_events_filtered_ions,
+                    epicea.ff.events_filtered_ions,
                     {'events_filter_name': 'two_ions_events'},
                     verbose=verbose)
     data.get_filter('two_ion_e_start_events_ions',
-                    epicea.ff_events_filtered_ions,
+                    epicea.ff.events_filtered_ions,
                     {'events_filter_name': 'two_ion_e_start_events'},
                     verbose=verbose)
     data.get_filter('two_ion_rand_start_events_ions',
-                    epicea.ff_events_filtered_ions,
+                    epicea.ff.events_filtered_ions,
                     {'events_filter_name': 'two_ion_rand_start_events'},
                     verbose=verbose)
     data.get_filter('NN_O_events_ions',
-                    epicea.ff_events_filtered_ions,
+                    epicea.ff.events_filtered_ions,
                     {'events_filter_name': 'NN_O_events'},
                     verbose=verbose)
 
     data.get_filter('NO_N_events_ions',
-                    epicea.ff_events_filtered_ions,
+                    epicea.ff.events_filtered_ions,
                     {'events_filter_name': 'NO_N_events'},
                     verbose=verbose)
 
     # Electron filters
     data.get_filter('has_position_electrons',
-                    epicea.ff_has_position_particles,
+                    epicea.ff.has_position_particles,
                     {'particles': 'electrons'},
                     verbose=verbose)
     data.get_filter('NN_O_events_electrons',
-                    epicea.ff_events_filtered_electrons,
+                    epicea.ff.events_filtered_electrons,
                     {'events_filter_name': 'NN_O_events'},
                     verbose=verbose)
     data.get_filter('NO_N_events_electrons',
-                    epicea.ff_events_filtered_electrons,
+                    epicea.ff.events_filtered_electrons,
                     {'events_filter_name': 'NO_N_events'},
                     verbose=verbose)
 # %%
@@ -330,11 +338,11 @@ def plot_two_ion_corelations(data, verbose=False):
     if verbose:
         print 'In plot_two_ion_corelations.'
     # Get some ions filters
-    double_ions = data.get_filter('two_ions_events_ions')
+    data.get_filter('two_ions_events_ions')
     double_ions_e_start = data.get_filter('two_ion_e_start_events_ions')
-    double_ions_rand_start = data.get_filter('two_ion_rand_start_events_ions')
-    NN_O_events_ions = data.get_filter('NN_O_events_ions')
-    NO_N_events_ions = data.get_filter('NO_N_events_ions')
+    data.get_filter('two_ion_rand_start_events_ions')
+    NN_O_events_ions = data.get_filter('NN_O_events_ions', verbose=verbose)
+    NO_N_events_ions = data.get_filter('NO_N_events_ions', verbose=verbose)
 
     # Plot distribution of nomber of ions
     num_ions = data.events.num_i.value
@@ -490,11 +498,14 @@ def plot_e_spec(data, verbose=False):
         print 'Plotting electron spectra for {}.'.format(data.name())
     plt_func.figure_wrapper('Electron data {}'.format(data.name()))
 
-    valid_pos = data.get_filter('has_position_electrons')
+    valid_pos = data.get_filter('has_position_electrons',
+                                verbose=verbose)
 
-    NN_O_events_electrons = data.get_filter('NN_O_events_electrons')
+    NN_O_events_electrons = data.get_filter('NN_O_events_electrons',
+                                            verbose=verbose)
 
-    NO_N_events_electrons = data.get_filter('NO_N_events_electrons')
+    NO_N_events_electrons = data.get_filter('NO_N_events_electrons',
+                                            verbose=verbose)
 
     if verbose:
         print 'Valid positions for {} electrons.'.format(valid_pos.sum())
@@ -505,10 +516,21 @@ def plot_e_spec(data, verbose=False):
     xy_center_slice = slice(x_axis_mm.searchsorted(-3),
                             x_axis_mm.searchsorted(3, side='right'))
 
-    e_all_image_xy = data.get_e_xy_image(x_axis_mm)
+#    e_all_image_xy = data.get_e_xy_image(x_axis_mm, verbose=verbose)
+    e_all_image_xy = data.get_e_xy_image(
+        x_axis_mm, verbose=verbose,
+        electrons_filter=data.electrons.event_id.value > 0.9 *
+        data.events.len()
+        )
     e_all_x_slice = e_all_image_xy[xy_center_slice, :].sum(axis=0)
     e_all_y_slice = e_all_image_xy[:, xy_center_slice].sum(axis=1)
-    e_all_image_rth = data.get_e_rth_image(r_axis_mm, th_axis_rad)
+#    e_all_image_rth = data.get_e_rth_image(r_axis_mm, th_axis_rad,
+#                                           verbose=verbose)
+    e_all_image_rth = data.get_e_rth_image(
+        r_axis_mm, th_axis_rad, verbose=verbose,
+        electrons_filter=data.electrons.event_id.value > 0.9 *
+        data.events.len()
+        )
     e_all_radial_dist = e_all_image_rth.sum(axis=0)
 
 #    e_NN_O_image_xy = data.get_e_xy_image(
@@ -517,10 +539,12 @@ def plot_e_spec(data, verbose=False):
 #        x_axis_mm, electrons_filter=NO_N_events_electrons)
 
     e_NN_O_image_rth = data.get_e_rth_image(
-        r_axis_mm, th_axis_rad, electrons_filter=NN_O_events_electrons)
+        r_axis_mm, th_axis_rad, electrons_filter=NN_O_events_electrons,
+        verbose=verbose)
     e_NN_O_radial_dist = e_NN_O_image_rth.sum(axis=0)
     e_NO_N_image_rth = data.get_e_rth_image(
-        r_axis_mm, th_axis_rad, electrons_filter=NO_N_events_electrons)
+        r_axis_mm, th_axis_rad, electrons_filter=NO_N_events_electrons,
+        verbose=verbose)
     e_NO_N_radial_dist = e_NO_N_image_rth.sum(axis=0)
 
     plt.subplot(231)
@@ -614,48 +638,38 @@ if __name__ == '__main__':
     verbose = True
     if 'data_list' not in locals():
         data_list = epicea.DataSetList()
-    data_list.add_dataset(
-        name='430_high',
-        h5_path='h5_data/N20_430_high.h5',
-        raw_data_path='../data/ExportedData/N2O_0029_KE373_hv430eV/',
-        verbose=verbose)
-#    data_list.add_dataset(
-#        name='412_high',
-#        h5_path='h5_data/N20_412_high.h5',
-#        raw_data_path='../data/ExportedData/N2O_0031_KE373_hv412eV/',
-#        verbose=verbose)
-#    data_list.add_dataset(
-#        name='430_mid',
-#        h5_path='h5_data/N20_430_mid.h5',
-#        raw_data_path='../data/ExportedData/N2O_366PE_430eV_0014/',
-#        verbose=verbose)
-#    data_list.add_dataset(
-#        name='412_mid',
-#        h5_path='h5_data/N20_412_mid.h5',
-#        raw_data_path='../data/ExportedData/N2O_366PE_4119eV_combined/',
-#        verbose=verbose)
-#    data_list.add_dataset(
-#        name='430_low',
-#        h5_path='h5_data/N20_430_low.h5',
-#        raw_data_path='../data/ExportedData/N2O_KE357_hv430p9_0047/',
-#        verbose=verbose)
-#    data_list.add_dataset(
-#        name='412_low',
-#        h5_path='h5_data/N20_412_low.h5',
-#        raw_data_path='../data/ExportedData/N2O_KE357_hv412p9_0049/',
-#        verbose=verbose)
-#    data_list.add_dataset(
-#        name='560',
-#        h5_path='h5_data/N20_560.h5',
-#        raw_data_path='../data/ExportedData/N2O_500PE_560eV_0017/',
-#        verbose=verbose)
+
+    raw_data_base_path = '../data/ExportedData'
+
+    # data_info list: [photon_energy, center_energy, data_path]
+    data_info = [
+#        [430, 373, 'N2O_0029_KE373_hv430eV'],
+#        [412, 373, 'N2O_0031_KE373_hv412eV'],
+#        [430, 366, 'N2O_366PE_430eV_0014'],
+        [412, 366, 'N2O_366PE_4119eV_combined'],
+#        [430, 357, 'N2O_KE357_hv430p9_0047'],
+#        [412, 357, 'N2O_KE357_hv412p9_0049'],
+#        [560, 500, 'N2O_500PE_560eV_0017']
+        ]
+
+    for photon_energy, center_energy, data_path in data_info:
+        name = '{}_{}'.format(photon_energy,
+                              center_energy).replace('.', '_')
+        h5_name = 'h5_data/N2O_{}.h5'.format(name)
+        data_list.add_dataset(
+            name=name,
+            h5_path=h5_name,
+            raw_data_path=os.path.join(raw_data_base_path, data_path),
+            photon_energy=photon_energy,
+            electron_center_energy=center_energy,
+            verbose=verbose)
 # %%
 
-    calibration_high = electron_calibration.PositionToEnergyCalibration()
-    calibration_high.load_from_file('test_data/calib_373.h5')
+    calibration_373 = epicea.ElectronEnergyCalibration()
+    calibration_373.load_from_file('test_data/calib_373.h5')
     for data in data_list:
-        if 'high' in data.name():
-            data.calculate_electron_energy(calibration_high)
+        if '373' in data.name():
+            data.calculate_electron_energy(calibration_373)
 # %%
 
     for data in data_list:
@@ -665,21 +679,24 @@ if __name__ == '__main__':
         data.electrons.correct_center(
             ELECTRON_OFFSET[data.name()][0],
             ELECTRON_OFFSET[data.name()][1])
+#        data.electrons.recalculate_polar_coordinates()
+# %%
 
-        make_filters(data)
+    for data in data_list:
+        make_filters(data, verbose=False)
+    # %%
+
+#    for data in data_list:
+#        plot_ion_tof(data, verbose=verbose)
+    # %%
+
+#    for data in data_list:
+#        plot_ion_image(data, verbose=verbose)
+    # %%
+
+#    for data in data_list:
+#        plot_two_ion_corelations(data, verbose=verbose)
     # %%
 
     for data in data_list:
-        plot_ion_tof(data, verbose=verbose)
-    # %%
-
-    for data in data_list:
-        plot_ion_image(data, verbose=verbose)
-    # %%
-
-    for data in data_list:
-        plot_two_ion_corelations(data, verbose=verbose)
-    # %%
-
-    for data in data_list:
-        plot_e_spec(data, verbose=verbose)
+        plot_e_spec(data, verbose=False)
