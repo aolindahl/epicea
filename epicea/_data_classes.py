@@ -7,6 +7,7 @@ Created on Thu Feb 12 13:38:15 2015
 import h5py
 import os.path
 import numpy as np
+from sys import stdout
 
 import _filter_functions as ff
 import _data_class_helper as _helper
@@ -21,6 +22,7 @@ class GroupContainer(object):
         if not isinstance(h5_file, h5py.File):
             if verbose:
                 print '"{}" is not a valid hdf5 file.'.format(h5_file)
+                stdout.flush()
             return
         else:
             self._h5_file = h5_file
@@ -32,12 +34,14 @@ class GroupContainer(object):
         if verbose:
             print 'Reference "{}" stored in "_group".'.format(
                 self._group)
+            stdout.flush()
 
         # Expose datasets
         for k, v in self._group.iteritems():
             setattr(self, k, v)
             if verbose:
                 print '\t{}'.format(k)
+                stdout.flush()
         setattr(self, 'len', self.event_id.len)
 
         self._verbose = verbose
@@ -49,6 +53,7 @@ class GroupContainer(object):
         if self._verbose:
             print 'Correcting center of {} with to x = {} y = {}.'.format(
                 self._group.name.lstrip('/'), x_shift, y_shift)
+            stdout.flush()
         if (not hasattr(self, 'pos_x')) or (not hasattr(self, 'pos_y')):
             return
         dset_name = 'xy_shift'
@@ -63,19 +68,23 @@ class GroupContainer(object):
         if self._verbose:
             print 'Old correction was x = {} y = {}.'.format(x_shift_old,
                                                              y_shift_old)
+            stdout.flush()
         x_shift_change = x_shift - x_shift_old
         y_shift_change = y_shift - y_shift_old
         if np.isclose(x_shift_change, 0) and np.isclose(y_shift_change, 0):
             if self._verbose:
                 print 'No adjustment to the position.'
+                stdout.flush()
             if new_dataset:
                 if self._verbose:
                     print 'New dataset, recalculating polar coordinates.'
+                    stdout.flush()
                 self.recalculate_polar_coordinates()
             return
         if self._verbose:
             print 'Adjustment is x = {} y = {}.'.format(x_shift_change,
                                                         y_shift_change)
+            stdout.flush()
         self.pos_x[:] += x_shift_change
         self.pos_y[:] += y_shift_change
         self.recalculate_polar_coordinates()
@@ -88,6 +97,7 @@ class GroupContainer(object):
         if self._verbose:
             print 'Recalculating the polar coordinates of {}.'.format(
                 self._group.name.lstrip('/'))
+            stdout.flush()
         x = self.pos_x.value
         y = self.pos_y.value
         self.pos_r[:] = np.sqrt(x**2 + y**2)
@@ -129,18 +139,24 @@ class DataSet(object):
 
         if self._verbose:
             print 'Open or create hdf5 file "{}".'.format(self._h5_path)
+            stdout.flush()
         self._h5_file = h5py.File(self._h5_path, mode='a')
 
         for group_name in _GROUP_NAMES:
+            if self._verbose:
+                print 'Looking for {}.'.format(group_name)
+                stdout.flush()
             if not os.path.exists(os.path.join(self._data_path,
                                                '.'.join([group_name, 'txt']))):
                 if self._verbose:
                     print 'No data file for {} in the folder "{}".'.format(
                         group_name, self._data_path)
+                    stdout.flush()
                 continue
-            if verbose:
+            if self._verbose:
                 print 'Adding the group "{}" to the hd5f file.'.format(
                     group_name)
+                stdout.flush()
             setattr(self, group_name,
                     GroupContainer(self._h5_file, self._data_path,
                                    group_name, verbose=self._verbose))
@@ -152,6 +168,7 @@ class DataSet(object):
         if self._verbose:
             print 'DataSet->destructor, closing hdf5 file "{}".'.format(
                 self._h5_file.filename)
+            stdout.flush()
         self._h5_file.close()
 
     def name(self):
@@ -182,15 +199,18 @@ class DataSet(object):
         if verbose:
             print 'Check if the filter "{}" is already created.'.format(
                 filter_name)
+            stdout.flush()
         if (filter_name in self._filters) and (update is False):
             if verbose:
                 print 'Returning existing filter.'
+                stdout.flush()
             return self._filters[filter_name].copy()
 
         if filter_function is None:
             if verbose:
                 print ('If no filter function is given and the filter does' +
                        ' not exist, an exception is raised.')
+                stdout.flush()
             raise NameError('No filter named "{}"'.format(filter_name) +
                             ' created previously and no mask given.')
 
@@ -199,9 +219,11 @@ class DataSet(object):
             print ('Construct the filter from the function {} with' +
                    ' kwyword parameters: {}.').format(filter_function,
                                                       filter_kw_params)
+            stdout.flush()
         self._filters[filter_name] = filter_function(self, **filter_kw_params)
         if verbose:
             print 'Return the filter mask.'
+            stdout.flush()
         return self._filters[filter_name].copy()
 
     def get_events_filter(self, source, source_filter, logic='any'):
@@ -259,6 +281,7 @@ class DataSet(object):
             verbose = self._verbose
         if verbose:
             print 'In get_i_tof_spectrum.'
+            stdout.flush()
 
         has_tof = self.get_filter('has_tof_ions',
                                   filter_function=ff.has_tof_ions,
@@ -270,12 +293,15 @@ class DataSet(object):
 
         if verbose:
             print 'Getting ion tof data.'
+            stdout.flush()
         tof = self.ions.tof_falling_edge[ions_filter]
         if verbose:
             print 'Making histogram.'
+            stdout.flush()
         hist = _helper.center_histogram(tof, t_axis)
         if verbose:
             print 'Returning.'
+            stdout.flush()
         return hist
 
     def get_i_xy_image(self, x_axis_mm, y_axis_mm=None, ions_filter=None,
@@ -285,12 +311,14 @@ class DataSet(object):
             verbose = self._verbose
         if verbose:
             print 'Get the has_position mask.'
+            stdout.flush()
         has_pos = self.get_filter('has_position_ions',
                                   ff.has_position_particles,
                                   {'particles': 'ions'},
                                   verbose=verbose)
         if self._verbose:
             print 'Merge has_pos filter and any given ions_filter.'
+            stdout.flush()
         if ions_filter is None:
             ions_filter = has_pos
         else:
@@ -301,6 +329,7 @@ class DataSet(object):
 
         if self._verbose:
             print 'Calculate and return image histogram.'
+            stdout.flush()
         return _helper.center_histogram_2d(self.ions.pos_x[ions_filter],
                                            self.ions.pos_y[ions_filter],
                                            x_axis_mm, y_axis_mm)
@@ -333,12 +362,14 @@ class DataSet(object):
             verbose = self._verbose
         if verbose:
             print 'Get the has_position mask.'
+            stdout.flush()
         has_pos = self.get_filter('has_position_electrons',
                                   ff.has_position_particles,
                                   {'particles': 'electrons'},
                                   verbose=verbose)
         if verbose:
             print 'Merge has_pos filter and any given electrons_filter.'
+            stdout.flush()
         if electrons_filter is None:
             electrons_filter = has_pos
         else:
@@ -349,6 +380,7 @@ class DataSet(object):
 
         if verbose:
             print 'Calculate and return electons image histogram.'
+            stdout.flush()
         return _helper.center_histogram_2d(
             self.electrons.pos_x[electrons_filter],
             self.electrons.pos_y[electrons_filter],
@@ -413,6 +445,7 @@ class DataSetList(object):
         if name in self._name_index_dict:
             print ('A data set with the name "{}" already in list.' +
                    ' No action taken.').format(name)
+            stdout.flush()
             return
 
         self._dataset_list.append(
