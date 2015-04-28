@@ -168,7 +168,6 @@ class DataSet(object):
         if self._verbose:
             print 'DataSet->destructor, closing hdf5 file "{}".'.format(
                 self._h5_file.filename)
-            stdout.flush()
         self._h5_file.close()
 
     def name(self):
@@ -422,6 +421,9 @@ class DataSetList(object):
     def __init__(self):
         self._dataset_list = []
         self._name_index_dict = {}
+
+    def __len__(self):
+        return len(self._dataset_list)
 
     def __iter__(self):
         for data_set in self._dataset_list:
