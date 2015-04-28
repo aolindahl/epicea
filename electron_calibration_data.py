@@ -19,22 +19,41 @@ if not os.path.exists(h5_base_path):
     os.mkdir(h5_base_path)
 
 
+class ModuleError(Exception):
+    pass
+
+
+class CenterEnergyError(ModuleError):
+    def __init__(self, msg):
+        self._msg = msg
+
+    def __str__(self):
+        return self._msg
+
+
 def get_data_in_list(center_energy, verbose=False):
+    try:
+        center_energy = int(center_energy)
+    except:
+        raise TypeError('Function get_data_in_list() called with ' +
+                        'center_energy of type ' +
+                        '{} '.format(type(center_energy)) +
+                        'that could not be converted to type int.')
     # Add the data sets to the list.
     # And store the corresponding photon energy values
 
     calib_data_list = epicea.DataSetList()
 
     ###########################################################################
-    # 366 eV pass energy
+    # 373 eV pass energy
     if 373 == center_energy:
         energy_and_name = {
-            471.0: 'CalibrationsForKE373eV/Kr_0023',
-            470.0: 'CalibrationsForKE373eV/Kr_0024',
-            469.0: 'CalibrationsForKE373eV/Kr_0022',
+#            471.0: 'CalibrationsForKE373eV/Kr_0023',
+#            470.0: 'CalibrationsForKE373eV/Kr_0024',
+#            469.0: 'CalibrationsForKE373eV/Kr_0022',
             467.0: 'CalibrationsForKE373eV/Kr_calib_00160021',
-            465.0: 'CalibrationsForKE373eV/Kr_calib_00160020',
-            463.0: 'CalibrationsForKE373eV/Kr_calib_00150019',
+#            465.0: 'CalibrationsForKE373eV/Kr_calib_00160020',
+#            463.0: 'CalibrationsForKE373eV/Kr_calib_00150019',
             462.0: 'CalibrationsForKE373eV/Kr_0025',
             }
 
@@ -122,6 +141,10 @@ def get_data_in_list(center_energy, verbose=False):
                 electron_center_energy=center_energy,
                 verbose=verbose)
 
+    else:
+        raise CenterEnergyError('No data for center energy {} eV.'.format(
+            center_energy))
+
     return calib_data_list
 
 
@@ -176,8 +199,14 @@ def center_check(data_list):
 
 if __name__ == '__main__':
     verbose = True
-    center_energy_list = [500]
     center_energy_list = [373, 366, 357, 500]
+    center_energy_list = [500]
+    data_list = {}
     for center_energy in center_energy_list:
-        data_list = get_data_in_list(center_energy, verbose)
-        center_check(data_list)
+        data_list[center_energy] = get_data_in_list(center_energy, verbose)
+
+        #     Need to be done only once
+#        for data in data_list[center_energy]:
+#            data.electrons.recalculate_polar_coordinates()
+
+        center_check(data_list[center_energy])
