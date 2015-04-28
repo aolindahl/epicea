@@ -14,4 +14,4 @@ from _testing import test_run as test
 from _data_class_helper import center_histogram, center_histogram_2d
 from _electron_calibration import PositionToEnergyCalibration as \
     ElectronEnergyCalibration
-from _electron_calibration_helper import find_kr_lines, poly_line
+from _electron_calibration_helper import find_lines, poly_line
