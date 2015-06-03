@@ -617,18 +617,19 @@ def plot_e_spec(data, verbose=False):
 
     plt.subplot(233)
     plt.plot(r_axis_mm, e_NN_O_radial_dist, 'y')
-    plt_func.title_wrapper('NN+ O+ events')
+    plt_func.title_wrapper(r'N$_2$$^+$ + O$^+$ events')
     plt_func.xlabel_wrapper('Position (mm)')
     plt_func.ylabel_wrapper('Number of electrons')
     plt_func.tick_fontsize()
 
     plt.subplot(236)
     plt.plot(r_axis_mm, e_NO_N_radial_dist, 'm')
-    plt_func.title_wrapper('NO+ N+ events')
+    plt_func.title_wrapper('NO$^+$ + N$^+$ events')
     plt_func.xlabel_wrapper('Position (mm)')
     plt_func.ylabel_wrapper('Number of electrons')
     plt_func.tick_fontsize()
 
+    plt.tight_layout()
     plt_func.savefig_wrapper()
 # %%
 
@@ -644,9 +645,9 @@ if __name__ == '__main__':
     # data_info list: [photon_energy, center_energy, data_path]
     data_info = [
 #        [430, 373, 'N2O_0029_KE373_hv430eV'],
-#        [412, 373, 'N2O_0031_KE373_hv412eV'],
+        [412, 373, 'N2O_0031_KE373_hv412eV'],
 #        [430, 366, 'N2O_366PE_430eV_0014'],
-        [412, 366, 'N2O_366PE_4119eV_combined'],
+#        [412, 366, 'N2O_366PE_4119eV_combined'],
 #        [430, 357, 'N2O_KE357_hv430p9_0047'],
 #        [412, 357, 'N2O_KE357_hv412p9_0049'],
 #        [560, 500, 'N2O_500PE_560eV_0017']
@@ -679,7 +680,7 @@ if __name__ == '__main__':
         data.electrons.correct_center(
             ELECTRON_OFFSET[data.name()][0],
             ELECTRON_OFFSET[data.name()][1])
-#        data.electrons.recalculate_polar_coordinates()
+        data.electrons.recalculate_polar_coordinates()
 # %%
 
     for data in data_list:
