@@ -31,12 +31,20 @@ th_axis_rad = np.linspace(0, 2*np.pi, 2**10+1)[1::2]
 for dataset in data_list:
     xy_img = dataset.get_i_xy_image(x_axis_mm)
     rth_img = dataset.get_i_rth_image(r_axis_mm, th_axis_rad)
+    r_dist_th_sum = rth_img.sum(axis=0)
+    r_dist = r_dist_th_sum / r_axis_mm
     fig = plt_func.figure_wrapper('Ion image of "{}'.format(dataset.name()))
+
     ax1 = fig.add_subplot(221)
     plt_func.imshow_wrapper(xy_img, x_axis_mm, axes=ax1)
+
     ax2 = fig.add_subplot(222)
     plt_func.imshow_wrapper(rth_img, r_axis_mm, th_axis_rad,
                             axes=ax2,
                             kw_args={'aspect': 'auto'})
+
     ax4 = fig.add_subplot(224)
-    ax4.plot(r_axis_mm, rth_img.sum(axis=0))
+    ax4.plot(r_axis_mm, r_dist_th_sum)
+
+    ax3 = fig.add_subplot(223)
+    ax3.plot(r_axis_mm, r_dist)
