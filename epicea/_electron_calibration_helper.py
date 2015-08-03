@@ -7,9 +7,15 @@ Created on Wed Mar  4 10:35:23 2015
 import numpy as np
 import lmfit
 
+_2pi = 2 * np.pi
+
 
 def gaussian(x, amplitude, center, width):
     return amplitude * np.exp(-(x-center)**2 / (2 * width**2))
+
+
+def lorentzian(x, amplitude, center, width):
+    return amplitude / _2pi * width / ((x - center)**2 + width**2 / 4)
 
 
 def start_params(x=None, y=None, params_in=None, n_lines=2, verbose=False):
@@ -71,7 +77,8 @@ def start_params(x=None, y=None, params_in=None, n_lines=2, verbose=False):
     return params
 
 
-def n_line_fit_model(params, x, data=None, eps_data=None):
+def n_line_fit_model(params, x, data=None, eps_data=None,
+                     line_type='gaussian'):
     i = 1
     model = np.zeros_like(x)
     while 1:
@@ -80,7 +87,15 @@ def n_line_fit_model(params, x, data=None, eps_data=None):
             center = params['center_{}'.format(i)].value
             width = params['width_{}'.format(i)].value
 
-            model += gaussian(x, amplitude, center, width) * x / center
+            if line_type == 'gaussian':
+                model += gaussian(x, amplitude, center, width) * x / center
+            elif line_type == 'lorentzian':
+                model += lorentzian(x, amplitude, center, width) * x / center
+            elif line_type == 'voigt':
+                model += (lmfit.models.voigt(x, amplitude, center, width) *
+                          x / center)
+            else:
+                raise TypeError('No model named ', line_type, ' avaliable.')
         except:
             break
         i += 1
@@ -157,7 +172,8 @@ def find_lines(rth_image, r_axis_mm, th_axis_rad,
                 line_params_list[:num_to_average -
                                  len(line_params_list) + i + 1])
 
-        line_params_list[i] = start_params(x=r_axis_mm, y=rth_image[i, :],
+        line_params_list[i] = start_params(x=r_axis_mm,
+                                           y=rth_image[i, :],
                                            params_in=selected_par_list,
                                            n_lines=n_lines)
         line_results_list[i] = lmfit.minimize(
@@ -168,18 +184,19 @@ def find_lines(rth_image, r_axis_mm, th_axis_rad,
     # Get the results in a nicer format
     r = np.empty((len(line_params_list), n_lines), dtype=float)
     w = np.empty_like(r)
+    a = np.empty_like(r)
     red_chi2 = np.empty(len(r))
 
     for i in range(len(line_params_list)):
         for line in range(n_lines):
             r[i, line] = line_params_list[i]['center_{}'.format(line+1)].value
-            w[i, line] = (line_params_list[i]['center_{}'.format(
-                line+1)].stderr)
-#                  line_results_list[i].redchi)
+            w[i, line] = line_params_list[i]['center_{}'.format(line+1)].stderr
+            a[i, line] = line_params_list[i][
+                'amplitude_{}'.format(line+1)].value
         red_chi2[i] = line_results_list[i].redchi
 
 #    w_1[w_1 <= 0] = np.inf
 #    w_2[w_2 <= 0] = np.inf
     if return_line_params_list:
-        return r, w, red_chi2, line_params_list
-    return r, w, red_chi2
+        return r, w, a, red_chi2, line_params_list
+    return r, w, a, red_chi2
