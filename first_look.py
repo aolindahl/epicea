@@ -10,53 +10,11 @@ import matplotlib.pyplot as plt
 import os.path
 
 import plt_func
+import global_parameters as glob
 if 'epicea' not in locals():
     import epicea
 
 plt.ion()
-
-ION_VMI_OFFSET = {}
-ION_VMI_OFFSET['430_373'] = np.array([1.8, -0.1])
-ION_VMI_OFFSET['412_373'] = np.array([1.8, -0.1])
-ION_VMI_OFFSET['430_366'] = np.array([1.8, -0.1])
-ION_VMI_OFFSET['412_366'] = np.array([1.8, -0.1])
-ION_VMI_OFFSET['430_357'] = np.array([-0.5, -0.1])
-ION_VMI_OFFSET['412_357'] = np.array([-0.5, -0.1])
-ION_VMI_OFFSET['560_500'] = np.array([1.8, -0.1])
-
-#ELECTRON_OFFSET = {}
-#ELECTRON_OFFSET['430_373'] = np.array([-0.2, -0.1])
-#ELECTRON_OFFSET['412_373'] = np.array([-0.2, 0.1])
-#ELECTRON_OFFSET['430_366'] = np.array([1., -0.1])
-#ELECTRON_OFFSET['412_366'] = np.array([-0.2, 0.1])
-#ELECTRON_OFFSET['430_357'] = np.array([-0.2, -0.2])
-#ELECTRON_OFFSET['412_357'] = np.array([-0.2, -0.1])
-#ELECTRON_OFFSET['560_500'] = np.array([-0.2, -0.2])
-ELECTRON_OFFSET = {}
-ELECTRON_OFFSET['430_373'] = np.array([0, 0])
-ELECTRON_OFFSET['412_373'] = np.array([0, 0])
-ELECTRON_OFFSET['430_366'] = np.array([0, 0])
-ELECTRON_OFFSET['412_366'] = np.array([0, 0])
-ELECTRON_OFFSET['430_357'] = np.array([0, 0])
-ELECTRON_OFFSET['412_357'] = np.array([0, 0])
-ELECTRON_OFFSET['560_500'] = np.array([0, 0])
-
-NO_N_TIME_SUM_RANGE_US = {}
-NN_O_TIME_SUM_RANGE_US = {}
-NO_N_TIME_SUM_RANGE_US['430_373'] = np.array([8.59, 8.63])
-NN_O_TIME_SUM_RANGE_US['430_373'] = np.array([8.65, 8.70])
-NO_N_TIME_SUM_RANGE_US['412_373'] = np.array([8.59, 8.63])
-NN_O_TIME_SUM_RANGE_US['412_373'] = np.array([8.65, 8.70])
-NO_N_TIME_SUM_RANGE_US['430_366'] = np.array([8.57, 8.61])
-NN_O_TIME_SUM_RANGE_US['430_366'] = np.array([8.625, 8.675])
-NO_N_TIME_SUM_RANGE_US['412_366'] = np.array([8.57, 8.61])
-NN_O_TIME_SUM_RANGE_US['412_366'] = np.array([8.625, 8.675])
-NO_N_TIME_SUM_RANGE_US['430_357'] = np.array([8.585, 8.625])
-NN_O_TIME_SUM_RANGE_US['430_357'] = np.array([8.645, 8.695])
-NO_N_TIME_SUM_RANGE_US['412_357'] = np.array([8.59, 8.63])
-NN_O_TIME_SUM_RANGE_US['412_357'] = np.array([8.65, 8.70])
-NO_N_TIME_SUM_RANGE_US['560_500'] = np.array([8.57, 8.61])
-NN_O_TIME_SUM_RANGE_US['560_500'] = np.array([8.625, 8.675])
 
 ANGLE_CUT = 2.7
 
@@ -83,13 +41,17 @@ def make_filters(data, verbose=False):
                     verbose=verbose)
     data.get_filter('NN_O_events',
                     epicea.ff.two_ions_time_sum_events,
-                    {'t_sum_min_us': NN_O_TIME_SUM_RANGE_US[data.name()][0],
-                     't_sum_max_us': NN_O_TIME_SUM_RANGE_US[data.name()][1]},
+                    {'t_sum_min_us':
+                        glob.NN_O_TIME_SUM_RANGE_US[data.name()][0],
+                     't_sum_max_us':
+                         glob.NN_O_TIME_SUM_RANGE_US[data.name()][1]},
                     verbose=verbose)
     data.get_filter('NO_N_events',
                     epicea.ff.two_ions_time_sum_events,
-                    {'t_sum_min_us': NO_N_TIME_SUM_RANGE_US[data.name()][0],
-                     't_sum_max_us': NO_N_TIME_SUM_RANGE_US[data.name()][1]},
+                    {'t_sum_min_us':
+                        glob.NO_N_TIME_SUM_RANGE_US[data.name()][0],
+                     't_sum_max_us':
+                         glob.NO_N_TIME_SUM_RANGE_US[data.name()][1]},
                     verbose=verbose)
 
     # Ion filters
@@ -457,13 +419,17 @@ def plot_two_ion_corelations(data, verbose=False):
         tof_tof_sym_hist = tof_tof_hist + tof_tof_hist.T
 #        plt_func.imshow_wrapper(tof_tof_sym_hist, t_axis_us)
         plt_func.imshow_wrapper(np.log(tof_tof_sym_hist+1), t_axis_us)
-        plt.plot(t_axis_us, NN_O_TIME_SUM_RANGE_US[data.name()][0] - t_axis_us,
+        plt.plot(t_axis_us,
+                 glob.NN_O_TIME_SUM_RANGE_US[data.name()][0] - t_axis_us,
                  'y', label='NN+ O+ selection')
-        plt.plot(t_axis_us, NN_O_TIME_SUM_RANGE_US[data.name()][1] - t_axis_us,
+        plt.plot(t_axis_us,
+                 glob.NN_O_TIME_SUM_RANGE_US[data.name()][1] - t_axis_us,
                  'y')
-        plt.plot(t_axis_us, NO_N_TIME_SUM_RANGE_US[data.name()][0] - t_axis_us,
+        plt.plot(t_axis_us,
+                 glob.NO_N_TIME_SUM_RANGE_US[data.name()][0] - t_axis_us,
                  'm', label='NO+ N+ selection')
-        plt.plot(t_axis_us, NO_N_TIME_SUM_RANGE_US[data.name()][1] - t_axis_us,
+        plt.plot(t_axis_us,
+                 glob.NO_N_TIME_SUM_RANGE_US[data.name()][1] - t_axis_us,
                  'm')
         plt_func.title_wrapper(names[i])
         plt.axis([t_axis_us.min(), t_axis_us.max(),
@@ -517,7 +483,7 @@ def plot_e_spec(data, verbose=False):
                             x_axis_mm.searchsorted(3, side='right'))
 
 #    e_all_image_xy = data.get_e_xy_image(x_axis_mm, verbose=verbose)
-    e_all_image_xy = data.get_e_xy_image(
+    e_all_image_xy, _ = data.get_e_xy_image(
         x_axis_mm, verbose=verbose,
         electrons_filter=data.electrons.event_id.value > 0.9 *
         data.events.len()
@@ -526,7 +492,7 @@ def plot_e_spec(data, verbose=False):
     e_all_y_slice = e_all_image_xy[:, xy_center_slice].sum(axis=1)
 #    e_all_image_rth = data.get_e_rth_image(r_axis_mm, th_axis_rad,
 #                                           verbose=verbose)
-    e_all_image_rth = data.get_e_rth_image(
+    e_all_image_rth, _ = data.get_e_rth_image(
         r_axis_mm, th_axis_rad, verbose=verbose,
         electrons_filter=data.electrons.event_id.value > 0.9 *
         data.events.len()
@@ -538,11 +504,11 @@ def plot_e_spec(data, verbose=False):
 #    e_NO_N_image_xy = data.get_e_xy_image(
 #        x_axis_mm, electrons_filter=NO_N_events_electrons)
 
-    e_NN_O_image_rth = data.get_e_rth_image(
+    e_NN_O_image_rth, _ = data.get_e_rth_image(
         r_axis_mm, th_axis_rad, electrons_filter=NN_O_events_electrons,
         verbose=verbose)
     e_NN_O_radial_dist = e_NN_O_image_rth.sum(axis=0)
-    e_NO_N_image_rth = data.get_e_rth_image(
+    e_NO_N_image_rth, _ = data.get_e_rth_image(
         r_axis_mm, th_axis_rad, electrons_filter=NO_N_events_electrons,
         verbose=verbose)
     e_NO_N_radial_dist = e_NO_N_image_rth.sum(axis=0)
@@ -675,16 +641,16 @@ if __name__ == '__main__':
 
     for data in data_list:
         data.ions.correct_center(
-            ION_VMI_OFFSET[data.name()][0],
-            ION_VMI_OFFSET[data.name()][1])
+            glob.ION_VMI_OFFSET[data.name()][0],
+            glob.ION_VMI_OFFSET[data.name()][1])
         data.electrons.correct_center(
-            ELECTRON_OFFSET[data.name()][0],
-            ELECTRON_OFFSET[data.name()][1])
-        data.electrons.recalculate_polar_coordinates()
+            glob.ELECTRON_OFFSET[data.name()][0],
+            glob.ELECTRON_OFFSET[data.name()][1])
+#        data.electrons.recalculate_polar_coordinates()
 # %%
 
     for data in data_list:
-        make_filters(data, verbose=False)
+        make_filters(data, verbose=True)
     # %%
 
 #    for data in data_list:
