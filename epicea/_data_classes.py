@@ -8,6 +8,7 @@ import h5py
 import os.path
 import numpy as np
 from sys import stdout
+import time
 
 import _filter_functions as ff
 import _data_class_helper as _helper
@@ -142,26 +143,43 @@ class DataSet(object):
             stdout.flush()
         self._h5_file = h5py.File(self._h5_path, mode='a')
 
+        # Iterate over all the group names
         for group_name in _GROUP_NAMES:
-            if self._verbose:
-                print 'Looking for {}.'.format(group_name)
-                stdout.flush()
+            # Print status message
+            self._verbose_message('Looking for {}.'.format(group_name))
+
+            # Look for the raw data file of the current group
             if not os.path.exists(os.path.join(self._data_path,
                                                '.'.join([group_name, 'txt']))):
-                if self._verbose:
-                    print 'No data file for {} in the folder "{}".'.format(
-                        group_name, self._data_path)
-                    stdout.flush()
+                # Print a message if it does not exist
+                self._verbose_message(
+                    'No data file for {} in the folder "{}".'.format(
+                        group_name, self._data_path))
+                # and continue to the next group
                 continue
-            if self._verbose:
-                print 'Adding the group "{}" to the hd5f file.'.format(
-                    group_name)
-                stdout.flush()
+
+            # If it does exist add it to the hd5f file
+            self._verbose_message(
+                'Adding the group "{}" to the hd5f file.'.format(group_name))
             setattr(self, group_name,
                     GroupContainer(self._h5_file, self._data_path,
                                    group_name, verbose=self._verbose))
 
+        try:
+            if 'polar_recalculated' not in self._h5_file['electrons'].attrs:
+                self.electrons.recalculate_polar_coordinates()
+                self._h5_file['electrons'].attrs['polar_recalculated'] = True
+        except:
+            print 'Problems with the polar coordinates.'
+
         self._filters = {}
+
+        derived_name = self._h5_file.filename.replace('.h5', '_derived.h5')
+        try:
+            self._derived_data = h5py.File(derived_name, 'a')
+        except IOError:
+            os.remove(derived_name)
+            self._derived_data = h5py.File(derived_name, 'a')
 
     def __del__(self):
         """Close the hdf5 file."""
@@ -169,6 +187,13 @@ class DataSet(object):
             print 'DataSet->destructor, closing hdf5 file "{}".'.format(
                 self._h5_file.filename)
         self._h5_file.close()
+        self._derived_data.close()
+
+    def _verbose_message(self, message):
+        """Print and flush message if verbose."""
+        if self._verbose:
+                print message
+                stdout.flush()
 
     def name(self):
         return self._name
@@ -193,18 +218,41 @@ class DataSet(object):
     def get_filter(self, filter_name, filter_function=None,
                    filter_kw_params={}, update=False, verbose=None):
         """Return mask for previously made filter or make a new one."""
+        # If no verbose parameter is given:
         if verbose is None:
+            # use the value from the class
             verbose = self._verbose
         if verbose:
             print 'Check if the filter "{}" is already created.'.format(
                 filter_name)
             stdout.flush()
+
+        # If the filter name is in the filter list and should not be updated...
         if (filter_name in self._filters) and (update is False):
             if verbose:
                 print 'Returning existing filter.'
                 stdout.flush()
+            # ...return the exixting filter
             return self._filters[filter_name].copy()
 
+        # Make sure that the filters group is in the derived data hdf5 file
+        filters = self._derived_data.require_group('filters')
+        # If it should not be updates and if is already exists and it has a
+        # time_stamp attribute, which is newer than the time_stamp of the
+        # correspnding function...
+        if ((update is False) and (filter_name in filters.keys()) and
+            ('time_stamp' in filters[filter_name].attrs.keys()) and
+            ((not hasattr(filter_function, 'time_stamp')) or
+             (filters[filter_name].attrs['time_stamp'] <
+              filter_function.time_stamp))):
+            # ...get the filter from file
+            if verbose:
+                print 'Get filter "{}" from hdf5 file.'.format(filter_name)
+            self._filters[filter_name] = filters[filter_name].value
+            # And return a copy
+            return self._filters[filter_name].copy()
+
+        # If there is no filter already the filter function have to be provided
         if filter_function is None:
             if verbose:
                 print ('If no filter function is given and the filter does' +
@@ -213,13 +261,36 @@ class DataSet(object):
             raise NameError('No filter named "{}"'.format(filter_name) +
                             ' created previously and no mask given.')
 
+        # Add the verbose parameter to the filter keyword parameters
         filter_kw_params['verbose'] = verbose
         if verbose:
             print ('Construct the filter from the function {} with' +
                    ' kwyword parameters: {}.').format(filter_function,
                                                       filter_kw_params)
             stdout.flush()
+
+        # Make the filter vector
         self._filters[filter_name] = filter_function(self, **filter_kw_params)
+        # Store it in the hdf5 file
+        try:
+            # Get existing, matching dataset or create new one
+            dset = filters.require_dataset(filter_name,
+                                           self._filters[filter_name].shape,
+                                           self._filters[filter_name].dtype)
+            # Write the data
+            dset[:] = self._filters[filter_name]
+        except TypeError:
+            # Exception occures if the new filter does not match the on the the
+            # file (dtype or shape)
+            # if so remove the old datset...
+            del filters[filter_name]
+            # ...and make a new one.
+            dset = filters.create_dataset(filter_name,
+                                          data=self._filters[filter_name])
+
+        # Time stamp the dataset in the file
+        dset.attrs['time_stamp'] = time.time()
+
         if verbose:
             print 'Return the filter mask.'
             stdout.flush()
@@ -273,6 +344,82 @@ class DataSet(object):
     def e_start_events(self):
         """Get mask for electron start events."""
         return self.events.num_e > 0
+
+    def _get_derived_data_group(self, data_name, filter_sum_string,
+                                match_data_dict={}, verbose=False):
+        # Get the data mame group
+        data_name_group = self._derived_data.require_group(data_name)
+        # Get the filter sum group
+        filter_sum_group = data_name_group.require_group(filter_sum_string)
+        # Iterate through all the dataset_groups
+        for dataset_group in filter_sum_group.itervalues():
+            # Compare the match_data_dict data
+            for match_key, match_value in match_data_dict.iteritems():
+                if ((match_key not in dataset_group) or
+                        np.any(dataset_group[match_key].value != match_value)):
+                        # A missmatch was found for the current dataset_group
+                        # break out oc the match_data comparison
+                        break
+            else:
+                # All match_data was matching: match found!
+                # return the current dataset_group
+                return dataset_group
+
+        # No match has been found at this point, make the group
+        # First find a name that works
+        name_counter = 0
+        while True:
+            dset_group_name = 'dset_' + str(name_counter)
+            if dset_group_name not in filter_sum_group:
+                break
+            name_counter += 1
+
+        # then make the group
+        dset_group = filter_sum_group.create_group(dset_group_name)
+
+        # Fill with the match data
+        for match_key, match_value in match_data_dict.iteritems():
+            dset_group.create_dataset(match_key, data=match_value)
+
+        # Add a dummy time stamp
+        dset_group.attrs['time_stamp'] = np.nan
+
+        # return the group
+        return dset_group
+
+    def load_derived_data(self, data_name, filter_sum_string,
+                          compare_time_stamp=0,
+                          verbose=None, match_data_dict={}):
+        if verbose is None:
+            verbose = self._verbose
+
+        dset_group = self._get_derived_data_group(
+            data_name, filter_sum_string,
+            match_data_dict=match_data_dict, verbose=verbose)
+
+        if (('data' not in dset_group) or
+                not (compare_time_stamp < dset_group.attrs.get('time_stamp'))):
+            return (np.empty((0,)), 0.)
+
+        return (dset_group['data'].value, dset_group.attrs['time_stamp'])
+
+    def store_derived_data(self, data, data_name, filter_sum_string,
+                           match_data_dict={}, verbose=False):
+        dset_group = self._get_derived_data_group(data_name,
+                                                  filter_sum_string,
+                                                  match_data_dict,
+                                                  verbose=verbose)
+
+        try:
+            dset = dset_group.require_dataset('data', data.shape, data.dtype)
+            dset[:] = data
+        except TypeError:
+            del dset_group['data']
+            dset_group.create_dataset('data', data=data)
+
+        time_stamp = time.time()
+        dset_group.attrs['time_stamp'] = time_stamp
+        return time_stamp
 
     def get_i_tof_spectrum(self, t_axis, ions_filter=None, verbose=None):
         """Get ion tof spectrum on given time axis and ions filter"""
@@ -355,7 +502,9 @@ class DataSet(object):
                                            r_axis_mm, th_axis_rad)
 
     def get_e_xy_image(self, x_axis_mm, y_axis_mm=None,
-                       electrons_filter=None, verbose=None):
+                       electrons_filter=None,
+                       compare_time_stamp=0,
+                       verbose=None):
         """Get the electron image based on electrons_filter."""
         if verbose is None:
             verbose = self._verbose
@@ -377,21 +526,38 @@ class DataSet(object):
         if y_axis_mm is None:
             y_axis_mm = x_axis_mm
 
-        if verbose:
-            print 'Calculate and return electons image histogram.'
-            stdout.flush()
-        return _helper.center_histogram_2d(
-            self.electrons.pos_x[electrons_filter],
-            self.electrons.pos_y[electrons_filter],
-            x_axis_mm, y_axis_mm)
+        # Check if the image already exists
+        data_name = 'e_xy_image'
+        filter_sum_string = str(electrons_filter.sum())
+        match_data_dict = {'x_axis_mm': x_axis_mm,
+                           'y_axis_mm': y_axis_mm}
+
+        img, img_time_stamp = self.load_derived_data(
+            data_name, filter_sum_string, match_data_dict=match_data_dict,
+            compare_time_stamp=compare_time_stamp, verbose=verbose)
+
+        if img.size == 0:
+            img = _helper.center_histogram_2d(
+                self.electrons.pos_x[electrons_filter],
+                self.electrons.pos_y[electrons_filter],
+                x_axis_mm, y_axis_mm)
+
+            img_time_stamp = self.store_derived_data(
+                img, data_name, filter_sum_string, match_data_dict,
+                verbose=verbose)
+
+        return img, img_time_stamp
 
     def get_e_rth_image(self,
                         r_axis_mm,
                         th_axis_rad=np.linspace(0, 2*np.pi, 513)[1::2],
-                        electrons_filter=None, verbose=None):
+                        electrons_filter=None, compare_time_stamp=0,
+                        verbose=None):
         """Get the electrons image in polar coordinates."""
         if verbose is None:
             verbose = self._verbose
+
+        # Get the position filter
         has_pos = self.get_filter('has_position_electrons',
                                   ff.has_position_particles,
                                   {'particles': 'electrons'},
@@ -401,10 +567,27 @@ class DataSet(object):
         else:
             electrons_filter *= has_pos
 
-        return _helper.center_histogram_2d(
-            self.electrons.pos_r[electrons_filter],
-            self.electrons.pos_t[electrons_filter],
-            r_axis_mm, th_axis_rad)
+        # Check if the image already exists
+        data_name = 'e_rth_image'
+        filter_sum_string = str(electrons_filter.sum())
+        match_data_dict = {'r_axis_mm': r_axis_mm,
+                           'th_axis_rad': th_axis_rad}
+
+        img, img_time_stamp = self.load_derived_data(
+            data_name, filter_sum_string, match_data_dict=match_data_dict,
+            compare_time_stamp=compare_time_stamp, verbose=verbose)
+
+        if img.size == 0:
+            img = _helper.center_histogram_2d(
+                self.electrons.pos_r[electrons_filter],
+                self.electrons.pos_t[electrons_filter],
+                r_axis_mm, th_axis_rad)
+
+            img_time_stamp = self.store_derived_data(
+                img, data_name, filter_sum_string, match_data_dict,
+                verbose=verbose)
+
+        return img, img_time_stamp
 
     def calculate_electron_energy(self, calibration):
         """Add the electron energy to the datset.
