@@ -27,7 +27,8 @@ class PositionToEnergyCalibration(object):
         self._n_theta = len(theta)
         self._d_theta = np.diff(theta).mean()
 
-    def add_calibration_data(self, radii, angles, energy, errors):
+    def add_calibration_data(self, radii, angles, energy, errors,
+                             relative_intensity):
         if len(radii) != len(angles):
             raise IndexError(
                 '"radii" and "angles" do not have the same length')
@@ -38,34 +39,62 @@ class PositionToEnergyCalibration(object):
         elif (self._theta != angles).any():
             raise ValueError('The same angles must be used for all data.')
 
-        self._data.append(np.empty((self._n_theta, 3)))
+        self._data.append(np.empty((self._n_theta, 4)))
         self._data[-1][:, 0] = radii
         self._data[-1][:, 1] = energy
         self._data[-1][:, 2] = errors
+        self._data[-1][:, 3] = relative_intensity
 
     def create_conversion(self, poly_order=1):
+        # Maka some parameter lists, there will be one element for each angle
         self._energy_params_list = []
         self._error_params_list = []
+        self._weights_params_list = []
+
+        # Easier acess to the data
         data = np.array(self._data)
+
+        # Iterate through all the angle bins
         for idx in range(len(self._theta)):
+            # Add a parameters object to the energy params list
             self._energy_params_list.append(
                 _helper.line_start_params([0]*(1+poly_order)))
+
+            # Fit a polynomial to the datapoints in energy
+            # Thus filling the above inserted parameters with reall vallues
             lmfit.minimize(_helper.poly_line,
                            self._energy_params_list[idx],
                            args=(data[:, idx, 0], data[:, idx, 1],
                                  data[:, idx, 2]))
+
+            # Add parameters to the error listr
             self._error_params_list.append(
                 _helper.line_start_params([0]*(1+poly_order)))
+            # and fit to populate them
             lmfit.minimize(_helper.poly_line,
                            self._error_params_list[idx],
                            args=(data[:, idx, 0], data[:, idx, 2]))
+
+            # Add parameters to the wieghts list
+            self._weights_params_list.append(
+                _helper.line_start_params([0]*(1+poly_order)))
+            # and populate the parameters through a fit
+            lmfit.minimize(_helper.poly_line,
+                           self._weights_params_list[idx],
+                           args=(data[:, idx, 0], data[:, idx, 3]))
 
     def get_energies(self, radii, angles):
         if self._energy_params_list is None:
             return None, None
 
+        if isinstance(radii, h5py.Dataset):
+            radii = radii.value
+        if isinstance(angles, h5py.Dataset):
+            angles = angles.value
+
         energies = np.empty_like(radii)
         errors = np.empty_like(radii)
+        weights = np.empty_like(radii)
 
         idx_list = np.round(
             (angles - self._theta[0]) / self._d_theta).astype(int)
@@ -74,15 +103,21 @@ class PositionToEnergyCalibration(object):
 
         for i in range(len(self._theta)):
             theta_idx_mask = idx_list == i
+
             energies[theta_idx_mask] = _helper.poly_line(
                 self._energy_params_list[i], radii[theta_idx_mask])
+
             errors[theta_idx_mask] = _helper.poly_line(
                 self._error_params_list[i], radii[theta_idx_mask])
+
 #         for idx, r in zip(idx_list, radii):
 #            energies.append(poly_line(self._energy_params_list[idx], r))
 #            errors.append(poly_line(self._error_params_list[idx], r))
 
-        return energies, errors
+            weights[theta_idx_mask] = _helper.poly_line(
+                self._weights_params_list[i], radii[theta_idx_mask])
+
+        return energies, errors, weights
 
     def get_data_copy(self):
         return np.array(self._theta), np.array(self._data)
