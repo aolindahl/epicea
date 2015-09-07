@@ -10,8 +10,8 @@ import numpy as np
 import sys
 import time
 
-import _filter_functions as ff
-import _data_class_helper as _helper
+from . import _filter_functions as ff
+from . import _data_class_helper as _helper
 
 
 class GroupContainer(object):
@@ -22,7 +22,7 @@ class GroupContainer(object):
     def __init__(self, h5_file, path, name, verbose=False):
         if not isinstance(h5_file, h5py.File):
             if verbose:
-                print '"{}" is not a valid hdf5 file.'.format(h5_file)
+                print('"{}" is not a valid hdf5 file.'.format(h5_file))
                 sys.stdout.flush()
             return
         else:
@@ -33,16 +33,14 @@ class GroupContainer(object):
                                                    source_file,
                                                    verbose=verbose)
         if verbose:
-            print 'Reference "{}" stored in "_group".'.format(
-                self._group)
-            sys.stdout.flush()
+            print('Reference "{}" stored in "_group".'.format(
+                self._group), flush=True)
 
         # Expose datasets
-        for k, v in self._group.iteritems():
+        for k, v in self._group.items():
             setattr(self, k, v)
             if verbose:
-                print '\t{}'.format(k)
-                sys.stdout.flush()
+                print('\t{}'.format(k), flush=True)
         setattr(self, 'len', self.event_id.len)
 
         self._verbose = verbose
@@ -52,9 +50,8 @@ class GroupContainer(object):
 
     def correct_center(self, x_shift=0., y_shift=0.):
         if self._verbose:
-            print 'Correcting center of {} with to x = {} y = {}.'.format(
-                self._group.name.lstrip('/'), x_shift, y_shift)
-            sys.stdout.flush()
+            print('Correcting center of {} with to x = {} y = {}.'.format(
+                self._group.name.lstrip('/'), x_shift, y_shift), flush=True)
         if (not hasattr(self, 'pos_x')) or (not hasattr(self, 'pos_y')):
             return
         dset_name = 'xy_shift'
@@ -67,25 +64,24 @@ class GroupContainer(object):
         x_shift_old, y_shift_old = self._group[dset_name].value
 
         if self._verbose:
-            print 'Old correction was x = {} y = {}.'.format(x_shift_old,
-                                                             y_shift_old)
-            sys.stdout.flush()
+            print('Old correction was x = {} y = {}.'.format(x_shift_old,
+                                                             y_shift_old),
+                  flush=True)
         x_shift_change = x_shift - x_shift_old
         y_shift_change = y_shift - y_shift_old
         if np.isclose(x_shift_change, 0) and np.isclose(y_shift_change, 0):
             if self._verbose:
-                print 'No adjustment to the position.'
-                sys.stdout.flush()
+                print('No adjustment to the position.', flush=True)
             if new_dataset:
                 if self._verbose:
-                    print 'New dataset, recalculating polar coordinates.'
-                    sys.stdout.flush()
+                    print('New dataset, recalculating polar coordinates.',
+                          flush=True)
                 self.recalculate_polar_coordinates()
             return
         if self._verbose:
-            print 'Adjustment is x = {} y = {}.'.format(x_shift_change,
-                                                        y_shift_change)
-            sys.stdout.flush()
+            print('Adjustment is x = {} y = {}.'.format(x_shift_change,
+                                                        y_shift_change),
+                  flush=True)
         self.pos_x[:] += x_shift_change
         self.pos_y[:] += y_shift_change
         self.recalculate_polar_coordinates()
@@ -96,9 +92,8 @@ class GroupContainer(object):
 
     def recalculate_polar_coordinates(self):
         if self._verbose:
-            print 'Recalculating the polar coordinates of {}.'.format(
-                self._group.name.lstrip('/'))
-            sys.stdout.flush()
+            print('Recalculating the polar coordinates of {}.'.format(
+                  self._group.name.lstrip('/')), flush=True)
         x = self.pos_x.value
         y = self.pos_y.value
         self.pos_r[:] = np.sqrt(x**2 + y**2)
@@ -140,8 +135,8 @@ class DataSet(object):
         self._verbose = verbose
 
         if self._verbose:
-            print 'Open or create hdf5 file "{}".'.format(self._h5_path)
-            sys.stdout.flush()
+            print('Open or create hdf5 file "{}".'.format(self._h5_path),
+                  flush=True)
         self._h5_file = h5py.File(self._h5_path, mode='a')
 
         # Iterate over all the group names
@@ -171,7 +166,7 @@ class DataSet(object):
                 self.electrons.recalculate_polar_coordinates()
                 self._h5_file['electrons'].attrs['polar_recalculated'] = True
         except:
-            print 'Problems with the polar coordinates.'
+            print('Problems with the polar coordinates.')
 
         self._filters = {}
 
@@ -183,22 +178,21 @@ class DataSet(object):
             self._derived_data = h5py.File(derived_name, 'a')
 
         # Set properties from the kwargs
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             setattr(self, k, v)
 
     def __del__(self):
         """Close the hdf5 file."""
         if self._verbose:
-            print 'DataSet->destructor, closing hdf5 file "{}".'.format(
-                self._h5_file.filename)
+            print('DataSet->destructor, closing hdf5 file "{}".'.format(
+                self._h5_file.filename), flush=True)
         self._h5_file.close()
         self._derived_data.close()
 
     def _verbose_message(self, message):
         """Print and flush message if verbose."""
         if self._verbose:
-                print message
-                sys.stdout.flush()
+                print(message, flush=True)
 
     def name(self):
         return self._name
@@ -211,11 +205,12 @@ class DataSet(object):
 
     def list_filters(self):
         """Print a list of existing filters."""
-        print ('Object "{}" connected to the hdf5 file "{}" have' +
+        print(('Object "{}" connected to the hdf5 file "{}" have' +
                ' the following filters defined.').format(self.__class__,
-                                                         self._h5_path)
+                                                         self._h5_path),
+              flush=True)
         for k in self._filters:
-            print '\t{}'.format(k)
+            print('\t{}'.format(k))
 
     def get_filter_name_list(self):
         return [k for k in self._filters]
@@ -228,15 +223,13 @@ class DataSet(object):
             # use the value from the class
             verbose = self._verbose
         if verbose:
-            print 'Check if the filter "{}" is already created.'.format(
-                filter_name)
-            sys.stdout.flush()
+            print('Check if the filter "{}" is already created.'.format(
+                  filter_name), flush=True)
 
         # If the filter name is in the filter list and should not be updated...
         if (filter_name in self._filters) and (update is False):
             if verbose:
-                print 'Returning existing filter.'
-                sys.stdout.flush()
+                print('Returning existing filter.', flush=True)
             # ...return the exixting filter
             return self._filters[filter_name].copy()
 
@@ -252,7 +245,8 @@ class DataSet(object):
               filter_function.time_stamp))):
             # ...get the filter from file
             if verbose:
-                print 'Get filter "{}" from hdf5 file.'.format(filter_name)
+                print('Get filter "{}" from hdf5 file.'.format(filter_name),
+                      flush=True)
             self._filters[filter_name] = filters[filter_name].value
             # And return a copy
             return self._filters[filter_name].copy()
@@ -260,19 +254,18 @@ class DataSet(object):
         # If there is no filter already the filter function have to be provided
         if filter_function is None:
             if verbose:
-                print ('If no filter function is given and the filter does' +
-                       ' not exist, an exception is raised.')
-                sys.stdout.flush()
+                print('If no filter function is given and the filter does',
+                      'not exist, an exception is raised.', flush=True)
             raise NameError('No filter named "{}"'.format(filter_name) +
                             ' created previously and no mask given.')
 
         # Add the verbose parameter to the filter keyword parameters
         filter_kw_params['verbose'] = verbose
         if verbose:
-            print ('Construct the filter from the function {} with' +
+            print(('Construct the filter from the function {} with' +
                    ' kwyword parameters: {}.').format(filter_function,
-                                                      filter_kw_params)
-            sys.stdout.flush()
+                                                      filter_kw_params),
+                  flush=True)
 
         # Make the filter vector
         self._filters[filter_name] = filter_function(self, **filter_kw_params)
@@ -297,8 +290,7 @@ class DataSet(object):
         dset.attrs['time_stamp'] = time.time()
 
         if verbose:
-            print 'Return the filter mask.'
-            sys.stdout.flush()
+            print('Return the filter mask.', flush=True)
         return self._filters[filter_name].copy()
 
     def get_events_filter(self, source, source_filter, logic='any'):
@@ -357,7 +349,7 @@ class DataSet(object):
         # Get the filter sum group
         filter_sum_group = data_name_group.require_group(filter_sum_string)
         # Iterate through all the dataset_groups
-        for dataset_group in filter_sum_group.itervalues():
+        for dataset_group in filter_sum_group.values():
             # Compare the match_data_dict data
             # first that variables are correct
             dataset_group_set = set(dataset_group)
@@ -367,7 +359,7 @@ class DataSet(object):
             if dataset_group_set != match_data_set:
                 # if missmatch go to the next iteration of the dataset groups
                 continue
-            for match_key, match_value in match_data_dict.iteritems():
+            for match_key, match_value in match_data_dict.items():
                 if (np.any(dataset_group[match_key].value != match_value)):
                         # A missmatch was found for the current dataset_group
                         # break out oc the match_data comparison
@@ -390,7 +382,7 @@ class DataSet(object):
         dset_group = filter_sum_group.create_group(dset_group_name)
 
         # Fill with the match data
-        for match_key, match_value in match_data_dict.iteritems():
+        for match_key, match_value in match_data_dict.items():
             dset_group.create_dataset(match_key, data=match_value)
 
         # Add a dummy time stamp
@@ -438,8 +430,7 @@ class DataSet(object):
         if verbose is None:
             verbose = self._verbose
         if verbose:
-            print 'In get_i_tof_spectrum.'
-            sys.stdout.flush()
+            print('In get_i_tof_spectrum.', flush=True)
 
         has_tof = self.get_filter('has_tof_ions',
                                   filter_function=ff.has_tof_ions,
@@ -450,16 +441,13 @@ class DataSet(object):
             ions_filter *= has_tof
 
         if verbose:
-            print 'Getting ion tof data.'
-            sys.stdout.flush()
+            print('Getting ion tof data.', flush=True)
         tof = self.ions.tof_falling_edge[ions_filter]
         if verbose:
-            print 'Making histogram.'
-            sys.stdout.flush()
+            print('Making histogram.', flush=True)
         hist = _helper.center_histogram(tof, t_axis)
         if verbose:
-            print 'Returning.'
-            sys.stdout.flush()
+            print('Returning.', flush=True)
         return hist
 
     def get_i_xy_image(self, x_axis_mm, y_axis_mm=None, ions_filter=None,
@@ -468,15 +456,14 @@ class DataSet(object):
         if verbose is None:
             verbose = self._verbose
         if verbose:
-            print 'Get the has_position mask.'
-            sys.stdout.flush()
+            print('Get the has_position mask.', flush=True)
         has_pos = self.get_filter('has_position_ions',
                                   ff.has_position_particles,
                                   {'particles': 'ions'},
                                   verbose=verbose)
         if self._verbose:
-            print 'Merge has_pos filter and any given ions_filter.'
-            sys.stdout.flush()
+            print('Merge has_pos filter and any given ions_filter.',
+                  flush=True)
         if ions_filter is None:
             ions_filter = has_pos
         else:
@@ -486,8 +473,7 @@ class DataSet(object):
             y_axis_mm = x_axis_mm
 
         if self._verbose:
-            print 'Calculate and return image histogram.'
-            sys.stdout.flush()
+            print('Calculate and return image histogram.', flush=True)
         return _helper.center_histogram_2d(self.ions.pos_x[ions_filter],
                                            self.ions.pos_y[ions_filter],
                                            x_axis_mm, y_axis_mm)
@@ -521,15 +507,14 @@ class DataSet(object):
         if verbose is None:
             verbose = self._verbose
         if verbose:
-            print 'Get the has_position mask.'
-            sys.stdout.flush()
+            print('Get the has_position mask.', flush=True)
         has_pos = self.get_filter('has_position_electrons',
                                   ff.has_position_particles,
                                   {'particles': 'electrons'},
                                   verbose=verbose)
         if verbose:
-            print 'Merge has_pos filter and any given electrons_filter.'
-            sys.stdout.flush()
+            print('Merge has_pos filter and any given electrons_filter.',
+                  flush=True)
         if electrons_filter is None:
             electrons_filter = has_pos
         else:
@@ -614,8 +599,7 @@ class DataSet(object):
         if old_time_stamp < max((calibration.conversion_time_stamp,
                                  1439382216)):
             if verbose:
-                print 'Recalculate electron energies.'
-                sys.stdout.flush()
+                print('Recalculate electron energies.', flush=True)
             energies, errors, weights = calibration.get_energies(
                 self.electrons.pos_r, self.electrons.pos_t)
             self.electrons.add_parameter('energy', energies)
@@ -625,8 +609,7 @@ class DataSet(object):
 
         else:
             if verbose:
-                print 'Energy data up to date.'
-                sys.stdout.flush()
+                print('Energy data up to date.', flush=True)
 
     def get_e_spectrum(self,
                        e_axis_eV,
@@ -707,9 +690,8 @@ class DataSetList(object):
                     verbose=False,
                     **kwargs):
         if name in self._name_index_dict:
-            print ('A data set with the name "{}" already in list.' +
-                   ' No action taken.').format(name)
-            sys.stdout.flush()
+            print(('A data set with the name "{}" already in list.' +
+                   ' No action taken.').format(name), flush=True)
             return
 
         self._dataset_list.append(

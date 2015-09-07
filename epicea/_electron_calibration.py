@@ -10,8 +10,8 @@ import lmfit
 import h5py
 import time
 
-import _electron_calibration_helper as _helper
-from progress import update_progress
+from . import _electron_calibration_helper as _helper
+from . progress import update_progress
 
 
 class PositionToEnergyCalibration(object):
@@ -234,11 +234,11 @@ class PositionToEnergyCalibration(object):
         if ((file_time_stamp < compare_time_stmp) or (file_data_sum !=
                                                       self._data_sum)):
             if verbose:
-                print 'Calibration on file to old,',
-                print 'or data sum does not match. Make new one calibration.'
+                print('Calibration on file to old,',
+                      'or data sum does not match. Make new one calibration.')
             self.create_conversion(poly_order=poly_order)
         else:
             if verbose:
-                print 'Loading old calibration since it is not that old :-)',
-                print 'and the data sum match.'
+                print('Loading old calibration since it is not that old :-)',
+                      'and the data sum match.')
             self.load_from_file(file_name)

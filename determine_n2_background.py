@@ -30,7 +30,7 @@ def make_new_bg(setting, plot=False, verbose=False):
 
 #    d = calib_data_list[0]
 #    for dset_name, dset in d._derived_data[
-#            'e_rth_image_straight/no_filter'].iteritems():
+#            'e_rth_image_straight/no_filter'].items():
 #        print dset_name, dset.keys(), dset['data'].shape
 
     if plot:
@@ -46,7 +46,7 @@ def make_new_bg(setting, plot=False, verbose=False):
     for d in calib_data_list:
         no_filter = d._derived_data['e_rth_image_straight/no_filter']
         time_stamp = 0
-        for dset_tmp in no_filter.itervalues():
+        for dset_tmp in no_filter.values():
             if (('time_stamp' in dset_tmp.attrs) and
                     (dset_tmp.attrs['time_stamp'] > time_stamp)):
                 time_stamp = dset_tmp.attrs['time_stamp']
@@ -112,7 +112,7 @@ def check_bg_valid(setting, verbose=False):
 
     for d in calib_data_list:
         no_filter = d._derived_data['e_rth_image_straight/no_filter']
-        for dset in no_filter.itervalues():
+        for dset in no_filter.values():
             if (('time_stamp' in dset.attrs) and
                     (dset.attrs['time_stamp'] > bg_time)):
                 return False

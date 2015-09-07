@@ -8,12 +8,12 @@ This is a mudule made to treat conicedence data from the EPICEA setup at the
 PLEIADES beamlina at the synchrotron SOLEIL.
 """
 
-from _data_classes import DataSet, DataSetList
-import _filter_functions as ff
-from _testing import test_run as test
-from _data_class_helper import (center_histogram, center_histogram_2d,
-                                limits_from_centers)
-from _electron_calibration import PositionToEnergyCalibration as \
+from . _data_classes import DataSet, DataSetList
+from . import _filter_functions as ff
+from . _testing import test_run as test
+from . _data_class_helper import (center_histogram, center_histogram_2d,
+                                  limits_from_centers)
+from . _electron_calibration import PositionToEnergyCalibration as \
     ElectronEnergyCalibration
-from _electron_calibration_helper import find_lines, poly_line
-import _electron_calibration_helper as electron_calibration_helper
+from . _electron_calibration_helper import find_lines, poly_line
+from . import _electron_calibration_helper as electron_calibration_helper

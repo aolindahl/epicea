@@ -7,7 +7,7 @@ Created on Wed Mar  4 10:35:23 2015
 import numpy as np
 import lmfit
 
-from progress import update_progress
+from . progress import update_progress
 
 _2pi = 2 * np.pi
 _gauss_fwhm_factor = 2 * np.sqrt(2 * np.log(2))
@@ -54,31 +54,31 @@ def start_params(x=None, y=None, params_in=None, n_lines=2, verbose=False,
 #            params['width_{}'.format(i_line)].value *= 1e-7
 #            params.add('skew_{}'.format(i_line), value=0)
 #    if n_lines > 2:
-#        print 'Warning: Only one or two lines implemented in start_params().',
-#        print 'Using two lines.'
+#        print('Warning: Only one or two lines implemented in start_params().',
+#        print('Using two lines.'
 
     if (x is not None) and (y is not None):
         max_idx = np.argmax(y)
         y_max = y[max_idx]
         if verbose:
-            print 'y_max =', y_max
+            print('y_max =', y_max)
         params['amplitude_1'].value = y_max
         params['center_1'].value = x[max_idx]
         if n_lines > 2:
             for i in range(max_idx):
                 if verbose:
-                    print 'y[i] =', y[i], 'y_max =', y_max
+                    print('y[i] =', y[i], 'y_max =', y_max)
                 if y[i] >= float(y_max) / 20:
                     params['center_1'].min = x[i]
                     if verbose:
-                        print 'i =', i
+                        print('i =', i)
                     break
             for i in range(len(x)-1, max_idx-1, -1):
                 if y[i] > float(y_max) / 20:
                     if verbose:
-                        print 'x[i] =', x[i],
-                        print 'params["center_1"].min = {}'.format(
-                            params['center_1'].min)
+                        print('x[i] =', x[i],
+                              'params["center_1"].min = {}'.format(
+                              params['center_1'].min))
                     params['center_diff'].max = x[i] - params['center_1'].min
                     params['center_diff'].value = params['center_diff'].max / 2
                     break
@@ -366,7 +366,7 @@ def find_lines(rth_image, r_axis_mm, th_axis_rad,
 
         # map some stuff from the full projection to each line
         amp_scaling = rth_image[i_th, :].sum() / r_projection.sum()
-        for k, v in current_params.iteritems():
+        for k, v in current_params.items():
             v.value = params_r_proj[k].value
             if k.startswith(('amp', 'bg')):
                 v.value *= amp_scaling
@@ -413,7 +413,7 @@ def find_lines(rth_image, r_axis_mm, th_axis_rad,
         update_progress(i_th, n_th, verbose=verbose)
 
     if verbose:
-        print ''
+        print('')
         lmfit.report_fit(line_results_list[len(line_results_list)/2])
 
 #    w_1[w_1 <= 0] = np.inf

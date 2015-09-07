@@ -1,5 +1,5 @@
-from _data_classes import DataSetList
-import _filter_functions as ff
+from . _data_classes import DataSetList
+from . import _filter_functions as ff
 
 
 def test_run():

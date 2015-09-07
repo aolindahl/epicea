@@ -67,7 +67,7 @@ def get_data_in_list(center_energy, verbose=False):
             462.0: 260.802
             }
 
-        for photon_energy, data_path in energy_and_name.iteritems():
+        for photon_energy, data_path in energy_and_name.items():
             name = 'Kr_{}_eV'.format(photon_energy).replace('.', '_')
             h5_name = 'center_{}_eV_{}.h5'.format(center_energy, name)
             calib_data_list.add_dataset(
@@ -100,7 +100,7 @@ def get_data_in_list(center_energy, verbose=False):
             463.3: 400.602,
             }
 
-        for photon_energy, data_path in energy_and_name.iteritems():
+        for photon_energy, data_path in energy_and_name.items():
             name = 'Kr_{}_eV'.format(photon_energy).replace('.', '_')
             h5_name = 'center_{}_eV_{}.h5'.format(center_energy, name)
             calib_data_list.add_dataset(
@@ -135,7 +135,7 @@ def get_data_in_list(center_energy, verbose=False):
             774.5: 251.431,
             }
 
-        for photon_energy, data_path in energy_and_name.iteritems():
+        for photon_energy, data_path in energy_and_name.items():
             name = 'N2_{}_eV'.format(photon_energy).replace('.', '_')
             h5_name = 'center_{}_eV_{}.h5'.format(center_energy, name)
             calib_data_list.add_dataset(
@@ -174,7 +174,7 @@ def get_data_in_list(center_energy, verbose=False):
             891.0: 159.264,
             }
 
-        for photon_energy, data_path in energy_and_name.iteritems():
+        for photon_energy, data_path in energy_and_name.items():
             name = 'N2_{}_eV'.format(photon_energy).replace('.', '_')
             h5_name = 'center_{}_eV_{}.h5'.format(center_energy, name)
             calib_data_list.add_dataset(

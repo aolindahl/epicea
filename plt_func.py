@@ -59,9 +59,9 @@ def tick_fontsize(axis=None):
 
 def bar_wrapper(x, y, color=None, label=None, verbose=False):
     if verbose:
-        print 'In bar_wrapper()'
-        print 'x.shape =', x.shape
-        print 'y.shape =', y.shape
+        print('In bar_wrapper()')
+        print('x.shape =', x.shape)
+        print('y.shape =', y.shape)
     width = np.diff(x).mean(dtype=float)
     plt.bar(x - width/2, y, width=width, linewidth=0, color=color,
             label=label)

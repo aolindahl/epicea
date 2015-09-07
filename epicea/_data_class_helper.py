@@ -21,7 +21,7 @@ def load_file(file_path, verbose=False):
         bool value that determines if the function outputs diagnostics.
     """
     if verbose:
-        print 'Reading data from "{}".'.format(file_path)
+        print('Reading data from "{}".'.format(file_path))
     with open(file_path, 'r') as fp:
         head = []
         for i in range(2):
@@ -66,16 +66,16 @@ def add_file_as_h5_group(h5_file, name, file_path, verbose=False):
     """
     if name in h5_file.keys():
         if verbose:
-            print 'Group "{}" already exists.'.format(name)
+            print('Group "{}" already exists.'.format(name))
         return h5_file[name]
     elif file_path is None:
         raise AttributeError('No raw data given and not an existing group.')
     if verbose:
-        print 'Creating group "{}".'.format(name)
+        print('Creating group "{}".'.format(name))
     group = h5_file.create_group(name)
     data, col_idx = load_file(file_path, verbose=verbose)
 
-    for name, col in col_idx.iteritems():
+    for name, col in col_idx.items():
         if name in ['num_i', 'electrons_wave_index',
                     'coincidence_order', 'num_random_hits', 'num_e',
                     'event_id', 'ions_wave_index',

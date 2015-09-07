@@ -104,28 +104,28 @@ def make_filters(data, verbose=False):
 def plot_ion_tof(data, verbose=False):
     """Plot some ions tof spectra."""
     if verbose:
-        print '\nPlotting tof spectra'
+        print('\nPlotting tof spectra')
     plt_func.figure_wrapper('Ion TOF {}'.format(data.name()))
     plt.subplot(211)
 
     t_axis_us = np.arange(2., 6.5, 0.01)
     t_axis_ns = t_axis_us * 1e6
     if verbose:
-        print 'Get tof specturm for all ions.'
+        print('Get tof specturm for all ions.')
     i_tof_all = data.get_i_tof_spectrum(t_axis_ns)
     plt.plot(t_axis_us, i_tof_all, 'k', label='All ions')
 
     if verbose:
-        print 'Get tof specturm for e start ions.'
+        print('Get tof specturm for e start ions.')
     i_tof_e_start = data.get_i_tof_spectrum(
         t_axis_ns,
         data.get_filter('e_start_ions'))
     if verbose:
-        print 'Get tof specturm for rand start ions.'
+        print('Get tof specturm for rand start ions.')
     i_tof_random_start = data.get_i_tof_spectrum(
         t_axis_ns, data.get_filter('rand_start_ions'))
     if verbose:
-        print 'Plot e start and rand start tof spectra.'
+        print('Plot e start and rand start tof spectra.')
     plt.plot(t_axis_us, i_tof_e_start, 'b', label='electron start ions')
     plt.plot(t_axis_us, i_tof_random_start, 'g', label='random start ions')
 
@@ -141,7 +141,7 @@ def plot_ion_tof(data, verbose=False):
         t_axis_ns, data.get_filter('NO_N_events_ions'))
 
     if verbose:
-        print 'Finding random start rescaling factor.'
+        print('Finding random start rescaling factor.')
     rescale_region = slice(t_axis_us.searchsorted(5.5),
                            t_axis_us.searchsorted(6.5))
     random_start_scaling = (i_tof_e_start[rescale_region].sum(dtype=float) /
@@ -168,17 +168,17 @@ def plot_ion_tof(data, verbose=False):
 def plot_ion_image(data, verbose=False):
     """Plot some ion images."""
     if verbose:
-        print '\nPlot some ion image data.'
+        print('\nPlot some ion image data.')
     x_axis_mm = np.arange(-40, 40, 0.1)
     if verbose:
-        print 'Get full image.'
+        print('Get full image.')
     i_image = data.get_i_xy_image(x_axis_mm)
     if verbose:
-        print 'Get e start image.'
+        print('Get e start image.')
     i_image_e_start = data.get_i_xy_image(
         x_axis_mm, ions_filter=data.get_filter('e_start_ions'))
     if verbose:
-        print 'Get rand start iage.'
+        print('Get rand start iage.')
     i_image_random_start = data.get_i_xy_image(
         x_axis_mm, ions_filter=~data.get_filter('e_start_ions'))
 
@@ -298,7 +298,7 @@ def calc_radius_fraction_hist(r, r_frac_axis):
 
 def plot_two_ion_corelations(data, verbose=False):
     if verbose:
-        print 'In plot_two_ion_corelations.'
+        print('In plot_two_ion_corelations.')
     # Get some ions filters
     data.get_filter('two_ions_events_ions')
     double_ions_e_start = data.get_filter('two_ion_e_start_events_ions')
@@ -332,7 +332,7 @@ def plot_two_ion_corelations(data, verbose=False):
     # plt_func.figure_wrapper('two ion angles {}'.format(data.name()))
     plt.subplot(222)
     if verbose:
-        print 'Get angles.'
+        print('Get angles.')
     th_e_start = data.ions.pos_t[double_ions_e_start]
     th_NN_O = data.ions.pos_t[NN_O_events_ions]
     th_NO_N = data.ions.pos_t[NO_N_events_ions]
@@ -361,15 +361,15 @@ def plot_two_ion_corelations(data, verbose=False):
     plt_func.tick_fontsize()
 
     if verbose:
-        print '{} events with two ions and electron start identified.'.format(
-            data.get_filter('two_ion_e_start_events').sum())
-        print '{} valid angle diffs found.'.format(th_hist_e_start.sum())
+        print('{} events with two ions and electron start identified.'.format(
+            data.get_filter('two_ion_e_start_events').sum()))
+        print('{} valid angle diffs found.'.format(th_hist_e_start.sum()))
 
     # Radial information
     # plt_func.figure_wrapper('radii {}'.format(data.name()))
     plt.subplot(223)
     if verbose:
-        print 'Get radii.'
+        print('Get radii.')
     r_frac_axis = np.linspace(1., 3.5, 257)[1::2]
     r_e_start = data.ions.pos_r[double_ions_e_start]
     r_NN_O = data.ions.pos_r[NN_O_events_ions]
@@ -461,7 +461,7 @@ def plot_e_spec(data, verbose=False):
     """First view of the electron spectra."""
 
     if verbose:
-        print 'Plotting electron spectra for {}.'.format(data.name())
+        print('Plotting electron spectra for {}.'.format(data.name()))
     plt_func.figure_wrapper('Electron data {}'.format(data.name()))
 
     valid_pos = data.get_filter('has_position_electrons',
@@ -474,7 +474,7 @@ def plot_e_spec(data, verbose=False):
                                             verbose=verbose)
 
     if verbose:
-        print 'Valid positions for {} electrons.'.format(valid_pos.sum())
+        print('Valid positions for {} electrons.'.format(valid_pos.sum()))
 
     x_axis_mm = np.linspace(-23, 23, 512)
     r_axis_mm = np.linspace(0, 23, 513)[1::2]
