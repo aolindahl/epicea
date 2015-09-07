@@ -50,11 +50,21 @@ def get_data_in_list(center_energy, verbose=False):
         energy_and_name = {
 #            471.0: 'CalibrationsForKE373eV/Kr_0023',
 #            470.0: 'CalibrationsForKE373eV/Kr_0024',
-#            469.0: 'CalibrationsForKE373eV/Kr_0022',
+            469.0: 'CalibrationsForKE373eV/Kr_0022',
             467.0: 'CalibrationsForKE373eV/Kr_calib_00160021',
-#            465.0: 'CalibrationsForKE373eV/Kr_calib_00160020',
-#            463.0: 'CalibrationsForKE373eV/Kr_calib_00150019',
+            465.0: 'CalibrationsForKE373eV/Kr_calib_00160020',
+            463.0: 'CalibrationsForKE373eV/Kr_calib_00150019',
             462.0: 'CalibrationsForKE373eV/Kr_0025',
+            }
+
+        data_scaling = {
+            471.0: 227.547,
+            470.0: 195.831,
+            469.0: 402.566,
+            467.0: 236.233,
+            465.0: 234.042,
+            463.0: 219.345,
+            462.0: 260.802
             }
 
         for photon_energy, data_path in energy_and_name.iteritems():
@@ -66,13 +76,14 @@ def get_data_in_list(center_energy, verbose=False):
                 raw_data_path=os.path.join(raw_data_base_path, data_path),
                 photon_energy=photon_energy,
                 electron_center_energy=center_energy,
-                verbose=verbose)
+                verbose=verbose,
+                data_scaling=data_scaling[photon_energy])
 
     ###########################################################################
     # 366 eV pass energy
     elif center_energy == 366:
         energy_and_name = {
-            453.3: 'CalibrationsForKE366eV/Kr_KEc366eV_PE453eV0007',
+#            453.3: 'CalibrationsForKE366eV/Kr_KEc366eV_PE453eV0007',
             455.3: 'CalibrationsForKE366eV/Kr_KEc366eV_PE455eV0006',
             457.3: 'CalibrationsForKE366eV/Kr_KEc366eV_PE457eV0005',
             459.3: 'CalibrationsForKE366eV/Kr_KEc366eV_PE459eV0002',
@@ -80,6 +91,15 @@ def get_data_in_list(center_energy, verbose=False):
             # 463.3: 'CalibrationsForKE366eV/Kr_KEc366eV_PE463eV0004',
             }
 
+        data_scaling = {
+            453.3: 401.248,
+            455.3: 414.556,
+            457.3: 401.537,
+            459.3: 401.599,
+            461.3: 400.553,
+            463.3: 400.602,
+            }
+
         for photon_energy, data_path in energy_and_name.iteritems():
             name = 'Kr_{}_eV'.format(photon_energy).replace('.', '_')
             h5_name = 'center_{}_eV_{}.h5'.format(center_energy, name)
@@ -89,19 +109,30 @@ def get_data_in_list(center_energy, verbose=False):
                 raw_data_path=os.path.join(raw_data_base_path, data_path),
                 photon_energy=photon_energy,
                 electron_center_energy=center_energy,
-                verbose=verbose)
+                verbose=verbose,
+                data_scaling=data_scaling[photon_energy])
 
     ###########################################################################
     # 357 eV pass energy
     elif center_energy == 357:
         energy_and_name = {
-            749.0: 'CalibrationsForKE357eV/N2_calib_0038',
+#            749.0: 'CalibrationsForKE357eV/N2_calib_0038',
             753.5: 'CalibrationsForKE357eV/N2_calib_0039',
             758.0: 'CalibrationsForKE357eV/N2_calib_0040',
             762.5: 'CalibrationsForKE357eV/N2_calib_0041',
             767.0: 'CalibrationsForKE357eV/N2_calib_0042',
             771.5: 'CalibrationsForKE357eV/N2_calib_0043',
             774.5: 'CalibrationsForKE357eV/N2_calib_0045',
+            }
+
+        data_scaling = {
+            749.0: 200.494,
+            753.5: 200.753,
+            758.0: 200.809,
+            762.5: 215.432,
+            767.0: 248.55,
+            771.5: 250.622,
+            774.5: 251.431,
             }
 
         for photon_energy, data_path in energy_and_name.iteritems():
@@ -113,7 +144,8 @@ def get_data_in_list(center_energy, verbose=False):
                 raw_data_path=os.path.join(raw_data_base_path, data_path),
                 photon_energy=photon_energy,
                 electron_center_energy=center_energy,
-                verbose=verbose)
+                verbose=verbose,
+                data_scaling=data_scaling[photon_energy])
 
     ###########################################################################
     # 357 eV pass energy
@@ -130,6 +162,18 @@ def get_data_in_list(center_energy, verbose=False):
             891.0: 'CalibrationsForKE500eV/N2_el_img_0033',
             }
 
+        data_scaling = {
+            910.0: 453.734,
+            912.0: 302.521,
+            914.0: 301.536,
+            916.0: 300.659,
+            906.0: 301.808,
+            900.0: 303.124,
+            896.0: 302.087,
+            893.0: 301.353,
+            891.0: 159.264,
+            }
+
         for photon_energy, data_path in energy_and_name.iteritems():
             name = 'N2_{}_eV'.format(photon_energy).replace('.', '_')
             h5_name = 'center_{}_eV_{}.h5'.format(center_energy, name)
@@ -139,7 +183,8 @@ def get_data_in_list(center_energy, verbose=False):
                 raw_data_path=os.path.join(raw_data_base_path, data_path),
                 photon_energy=photon_energy,
                 electron_center_energy=center_energy,
-                verbose=verbose)
+                verbose=verbose,
+                data_scaling=data_scaling[photon_energy])
 
     else:
         raise CenterEnergyError('No data for center energy {} eV.'.format(
@@ -201,6 +246,7 @@ if __name__ == '__main__':
     verbose = True
     center_energy_list = [373, 366, 357, 500]
     center_energy_list = [500]
+    center_energy_list = [373]
     data_list = {}
     for center_energy in center_energy_list:
         data_list[center_energy] = get_data_in_list(center_energy, verbose)

@@ -482,6 +482,8 @@ def plot_e_spec(data, verbose=False):
     xy_center_slice = slice(x_axis_mm.searchsorted(-3),
                             x_axis_mm.searchsorted(3, side='right'))
 
+    e_axis_ev = np.linspace(320, 380, 2**8+1)[1::2]
+
 #    e_all_image_xy = data.get_e_xy_image(x_axis_mm, verbose=verbose)
     e_all_image_xy, _ = data.get_e_xy_image(
         x_axis_mm, verbose=verbose,
@@ -513,6 +515,15 @@ def plot_e_spec(data, verbose=False):
         verbose=verbose)
     e_NO_N_radial_dist = e_NO_N_image_rth.sum(axis=0)
 
+    e_NN_O_energy_dist, _ = data.get_e_spectrum(
+        e_axis_ev,
+        electrons_filter=NN_O_events_electrons,
+        verbose=verbose)
+    e_NO_N_energy_dist, _ = data.get_e_spectrum(
+        e_axis_ev,
+        electrons_filter=NO_N_events_electrons,
+        verbose=verbose)
+
     plt.subplot(231)
     plt_func.imshow_wrapper(e_all_image_xy, x_axis_mm)
     plt_func.title_wrapper('2D image')
@@ -520,7 +531,7 @@ def plot_e_spec(data, verbose=False):
     plt_func.ylabel_wrapper('Position (mm)')
     plt_func.tick_fontsize()
 
-    plt.subplot(4, 3, 7)
+    plt.subplot(437)
     plt.plot(x_axis_mm, e_all_x_slice, label='normal')
     plt.plot(x_axis_mm[::-1], e_all_x_slice, label='flipped')
     plt_func.title_wrapper('x slice')
@@ -582,21 +593,92 @@ def plot_e_spec(data, verbose=False):
 #    plt_func.tick_fontsize()
 
     plt.subplot(233)
-    plt.plot(r_axis_mm, e_NN_O_radial_dist, 'y')
-    plt_func.title_wrapper(r'N$_2$$^+$ + O$^+$ events')
+    plt.plot(r_axis_mm, e_NN_O_radial_dist, 'y', label=r'N$_2$$^+$ + O$^+$')
+    plt.plot(r_axis_mm, e_NO_N_radial_dist, 'm', label=r'NO$^+$ + N$^+$')
+    plt_func.title_wrapper('on radial grid')
     plt_func.xlabel_wrapper('Position (mm)')
     plt_func.ylabel_wrapper('Number of electrons')
     plt_func.tick_fontsize()
+    plt_func.legend_wrapper()
 
     plt.subplot(236)
-    plt.plot(r_axis_mm, e_NO_N_radial_dist, 'm')
-    plt_func.title_wrapper('NO$^+$ + N$^+$ events')
-    plt_func.xlabel_wrapper('Position (mm)')
+    plt.plot(e_axis_ev, e_NN_O_energy_dist, 'y', label=r'N$_2$$^+$ + O$^+$')
+    plt.plot(e_axis_ev, e_NO_N_energy_dist, 'm', label=r'NO$^+$ + N$^+$')
+    plt_func.title_wrapper('On an energy grid')
+    plt_func.xlabel_wrapper('Energy (eV)')
     plt_func.ylabel_wrapper('Number of electrons')
     plt_func.tick_fontsize()
+    plt_func.legend_wrapper()
 
     plt.tight_layout()
     plt_func.savefig_wrapper()
+# %%
+
+
+def plot_combined_e_spec(data_list, verbose=False):
+    full_fig = plt_func.figure_wrapper('all electrons')
+    full_412_ax = full_fig.add_subplot(211)
+    full_430_ax = full_fig.add_subplot(212)
+    nn_o_fig = plt_func.figure_wrapper('NN + O')
+    nn_o_412_ax = nn_o_fig.add_subplot(211)
+    nn_o_430_ax = nn_o_fig.add_subplot(212)
+    no_n_fig = plt_func.figure_wrapper('NO + N')
+    no_n_412_ax = no_n_fig.add_subplot(211)
+    no_n_430_ax = no_n_fig.add_subplot(212)
+
+    with_fig = plt_func.figure_wrapper('energy uncertainty')
+    with_ax = None
+    with_ax_list = []
+
+    e_axis_ev = np.linspace(340, 380, 2**12+1)[1::2]
+    w_axis_ev = np.linspace(0, 10, 2**10+1)[1::2]
+
+    for i_data, data in enumerate(data_list):
+        with_ax = with_fig.add_subplot(2, 3, i_data + 1, sharex=with_ax)
+        with_ax_list.append(with_ax)
+        hist = epicea.center_histogram(data.electrons.energy_uncertainty,
+                                       w_axis_ev)
+        with_ax.semilogy(w_axis_ev, hist)
+        plt_func.title_wrapper(data.name())
+
+        uncertainty_filter_electrons = data.get_filter(
+            'energy_uncertainty_02',
+            filter_function=epicea.ff.electron_energy_uncertainty,
+            filter_kw_params={'max_uncertainty': 0.2},
+            verbose=verbose)
+            
+
+        NN_O_events_electrons = data.get_filter('NN_O_events_electrons',
+                                                verbose=verbose)
+        NO_N_events_electrons = data.get_filter('NO_N_events_electrons',
+                                                verbose=verbose)
+
+        e_energy_dist, _ = data.get_e_spectrum(
+            e_axis_ev, electrons_filter=uncertainty_filter_electrons,
+            verbose=verbose)
+        e_NN_O_energy_dist, _ = data.get_e_spectrum(
+            e_axis_ev,
+            electrons_filter=NN_O_events_electrons,
+            verbose=verbose)
+        e_NO_N_energy_dist, _ = data.get_e_spectrum(
+            e_axis_ev,
+            electrons_filter=NO_N_events_electrons,
+            verbose=verbose)
+
+        ax_nn_o, ax_no_n, ax_full = ((nn_o_412_ax, no_n_412_ax, full_412_ax) if
+                                     data.photon_energy() == 412 else
+                                     (nn_o_430_ax, no_n_430_ax, full_430_ax))
+
+        ax_full.plot(e_axis_ev, e_energy_dist, '.-',
+                     label='full {}'.format(data.name()))
+        ax_nn_o.plot(e_axis_ev, e_NN_O_energy_dist,  '.-',
+                     label=r'N$_2$$^+$ + O$^+$ {}'.format(data.name))
+        ax_no_n.plot(e_axis_ev, e_NO_N_energy_dist,  '.-',
+                     label=r'NO$^+$ + N$^+$ {}'.format(data.name))
+
+    for ax in [nn_o_412_ax, nn_o_430_ax, no_n_412_ax, no_n_430_ax,
+               full_412_ax, full_430_ax]:
+        plt_func.legend_wrapper(ax)
 # %%
 
 if __name__ == '__main__':
@@ -610,12 +692,12 @@ if __name__ == '__main__':
 
     # data_info list: [photon_energy, center_energy, data_path]
     data_info = [
-#        [430, 373, 'N2O_0029_KE373_hv430eV'],
+        [430, 373, 'N2O_0029_KE373_hv430eV'],
         [412, 373, 'N2O_0031_KE373_hv412eV'],
-#        [430, 366, 'N2O_366PE_430eV_0014'],
-#        [412, 366, 'N2O_366PE_4119eV_combined'],
-#        [430, 357, 'N2O_KE357_hv430p9_0047'],
-#        [412, 357, 'N2O_KE357_hv412p9_0049'],
+        [430, 366, 'N2O_366PE_430eV_0014'],
+        [412, 366, 'N2O_366PE_4119eV_combined'],
+        [430, 357, 'N2O_KE357_hv430p9_0047'],
+        [412, 357, 'N2O_KE357_hv412p9_0049'],
 #        [560, 500, 'N2O_500PE_560eV_0017']
         ]
 
@@ -632,11 +714,11 @@ if __name__ == '__main__':
             verbose=verbose)
 # %%
 
-    calibration_373 = epicea.ElectronEnergyCalibration()
-    calibration_373.load_from_file('test_data/calib_373.h5')
+    calibration = epicea.ElectronEnergyCalibration()
     for data in data_list:
-        if '373' in data.name():
-            data.calculate_electron_energy(calibration_373)
+        calibration.load_from_file('h5_data/calib_{}.h5'.format(
+            data.electron_center_energy()))
+        data.calculate_electron_energy(calibration, verbose=True)
 # %%
 
     for data in data_list:
@@ -650,7 +732,7 @@ if __name__ == '__main__':
 # %%
 
     for data in data_list:
-        make_filters(data, verbose=True)
+        make_filters(data, verbose=False)
     # %%
 
 #    for data in data_list:
@@ -665,5 +747,8 @@ if __name__ == '__main__':
 #        plot_two_ion_corelations(data, verbose=verbose)
     # %%
 
-    for data in data_list:
-        plot_e_spec(data, verbose=False)
+#    for data in data_list:
+#        plot_e_spec(data, verbose=False)
+# %%
+
+    plot_combined_e_spec(data_list, verbose=True)

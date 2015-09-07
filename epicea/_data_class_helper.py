@@ -6,6 +6,7 @@ Created on Thu Feb 12 13:38:15 2015
 """
 
 import numpy as _np
+import h5py
 
 
 def load_file(file_path, verbose=False):
@@ -219,11 +220,15 @@ def limits_from_centers(centers):
     return limits
 
 
-def center_histogram(data, centers):
+def center_histogram(data, centers, weights=None):
     """Rerurn histogram vector corresponding to given centers"""
 
+    if isinstance(data, h5py.Dataset):
+        data = data.value
+    if isinstance(weights, h5py.Dataset):
+        weights = weights.value
     limits = limits_from_centers(centers)
-    hist, _ = _np.histogram(data, limits)
+    hist, _ = _np.histogram(data, limits, weights=weights)
     return hist
 
 

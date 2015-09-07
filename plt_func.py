@@ -32,16 +32,18 @@ def ylabel_wrapper(text):
     text_wrapper(plt.ylabel, text)
 
 
-def legend_wrapper(loc='best'):
-    plt.legend(loc=loc, fontsize=FONTSIZE)
+def legend_wrapper(loc='best', ax=None):
+    if ax is None:
+        ax = plt
+    ax.legend(loc=loc, fontsize=FONTSIZE)
 
 
 def title_wrapper(text):
     plt.title(text, fontsize=FONTSIZE)
 
 
-def colorbar_wrapper(label=None):
-    cbar = plt.colorbar()
+def colorbar_wrapper(label=None, mappable=None):
+    cbar = plt.colorbar(mappable=mappable)
     cbar.ax.tick_params(labelsize=FONTSIZE)
     if label is not None:
         cbar.set_label(label)
@@ -65,7 +67,7 @@ def bar_wrapper(x, y, color=None, label=None, verbose=False):
             label=label)
 
 
-def imshow_wrapper(img, x_centers, y_centers=None, axes=plt, kw_args={}):
+def imshow_wrapper(img, x_centers, y_centers=None, ax=plt, kw_args={}):
     x_step = np.diff(x_centers).mean(dtype=float)
     x_min = x_centers.min() - x_step/2
     x_max = x_centers.max() + x_step/2
@@ -77,9 +79,10 @@ def imshow_wrapper(img, x_centers, y_centers=None, axes=plt, kw_args={}):
         y_max = y_centers.max() + y_step/2
 
     axis = (x_min, x_max, y_min, y_max)
-    axes.imshow(img, extent=axis, origin='lower',
-                interpolation='none', **kw_args)
-    axes.axis(axis)
+    img_ax = ax.imshow(img, extent=axis, origin='lower',
+                    interpolation='none', **kw_args)
+    ax.axis(axis)
+    return img_ax
 
 
 def savefig_wrapper():

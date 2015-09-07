@@ -105,6 +105,26 @@ def two_ions_time_sum_events(data,
     return mask
 
 
+def has_energy_electrons(data, verbose=False):
+    return np.isfinite(data.electrons.energy)
+
+
+def electron_energy_uncertainty(data,
+                                max_uncertainty=np.inf,
+                                verbose=False):
+    has_energy_electrons_mask = data.get_filter(
+        'has_energy_electrons',
+        has_energy_electrons,
+        verbose=verbose)
+
+    mask = np.zeros_like(has_energy_electrons_mask, dtype=bool)
+    uncertainties = data.electrons.energy_uncertainty[
+        has_energy_electrons_mask]
+    mask[has_energy_electrons_mask] = uncertainties <= max_uncertainty
+
+    return mask
+
+
 def combine(data, filter_name_list, logic=np.all, verbose=False):
     filter_list = [data.get_filter(filter_name, verbose=verbose) for
                    filter_name in filter_name_list]
