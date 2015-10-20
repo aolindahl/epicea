@@ -407,70 +407,6 @@ def get_params_and_funktion(setting, gas, x, y, bg=None):
     return params, fit_funk, kws, 'powel'
 
 
-def find_lines_old(rth_image, r_axis_mm, th_axis_rad,
-                   n_lines=2, return_line_params_list=False,
-                   rth_image_straight=None):
-    # Fit to r projection to be used as initial parameters
-    r_projection = rth_image.mean(axis=0)
-    params_r_proj = start_params(x=r_axis_mm, y=r_projection, n_lines=n_lines)
-    lmfit.minimize(n_line_fit_model, params_r_proj,
-                   args=(r_axis_mm, r_projection))
-
-    # Fit for each line based on the r projection fit
-    line_params_list = []
-    line_results_list = []
-    for i in range(len(th_axis_rad)):
-        line_params_list.append(start_params(
-            x=r_axis_mm, y=rth_image[i, :], n_lines=n_lines))
-        line_results_list.append(
-            lmfit.minimize(n_line_fit_model,
-                           line_params_list[i],
-                           args=(r_axis_mm, rth_image[i, :])))
-
-#     Go trough once more
-    num_to_average = len(th_axis_rad)/20
-    if num_to_average == 0:
-        num_to_average = 1
-    for i in range(len(th_axis_rad)):
-        selected_par_list = line_params_list[np.maximum(i-num_to_average, 0):
-                                             i+num_to_average+1]
-        if i < num_to_average:
-            selected_par_list.extend(line_params_list[-num_to_average+i:])
-        if num_to_average < len(line_params_list) - i:
-            selected_par_list.extend(
-                line_params_list[:num_to_average -
-                                 len(line_params_list) + i + 1])
-
-        line_params_list[i] = start_params(x=r_axis_mm,
-                                           y=rth_image[i, :],
-                                           params_in=selected_par_list,
-                                           n_lines=n_lines)
-        line_results_list[i] = lmfit.minimize(
-            n_line_fit_model,
-            line_params_list[i],
-            args=(r_axis_mm, rth_image[i, :]))
-
-    # Get the results in a nicer format
-    r = np.empty((len(line_params_list), n_lines), dtype=float)
-    w = np.empty_like(r)
-    a = np.empty_like(r)
-    red_chi2 = np.empty(len(r))
-
-    for i in range(len(line_params_list)):
-        for line in range(n_lines):
-            r[i, line] = line_params_list[i]['center_{}'.format(line+1)].value
-            w[i, line] = line_params_list[i]['center_{}'.format(line+1)].stderr
-            a[i, line] = line_params_list[i][
-                'amplitude_{}'.format(line+1)].value
-        red_chi2[i] = line_results_list[i].redchi
-
-#    w_1[w_1 <= 0] = np.inf
-#    w_2[w_2 <= 0] = np.inf
-    if return_line_params_list:
-        return r, w, a, red_chi2, line_params_list
-    return r, w, a, red_chi2
-
-
 def find_lines(rth_image, r_axis_mm, th_axis_rad,
                setting,
                n_lines_fit=2, n_lines_store=2,
@@ -479,23 +415,13 @@ def find_lines(rth_image, r_axis_mm, th_axis_rad,
 
     # Fit to r projection
     r_projection = rth_image.sum(axis=0)
-#    if gas == 'N2':
-#        kws = {'bg': bg}
-#        params_r_proj = n_voigt_with_bg_start_params(
-#            x=r_axis_mm, y=r_projection, n_lines=n_lines_fit,
-#            bg=True)
-#        model = n_voigt_with_bg_model
-#    elif gas == 'Kr':
-#        kws = {'line_type': 'voigt'}
-#        params_r_proj = start_params(
-#            x=r_axis_mm, y=r_projection, n_lines=n_lines_fit, **kws)
-#        model = n_line_fit_model
 
-    params_r_proj, fit_funk, kws, method = get_params_and_funktion(
+    params_r_proj_initial, fit_funk, kws, method = get_params_and_funktion(
         setting, gas, r_axis_mm, r_projection, bg)
 
-    lmfit.minimize(fit_funk, params_r_proj, method=method,
-                   args=(r_axis_mm, r_projection), kws=kws)
+    r_proj_result = lmfit.minimize(fit_funk, params_r_proj_initial,
+                                   method=method,
+                                   args=(r_axis_mm, r_projection), kws=kws)
 
     # Fit for each line based on the r projection fit
     line_params_list = []
@@ -508,27 +434,15 @@ def find_lines(rth_image, r_axis_mm, th_axis_rad,
     a = np.empty_like(r)
     red_chi2 = np.empty(n_th)
 
+    # Get initial parameters
+    line_initial_params, ... = get_params_and_funktion(setting, gas, r_axis_mm,
+                                                       r_projection, bg)
+
     for i_th in range(n_th):
-        # Add a new set for parameters for each line
-#        current_params, model, kws = get_params_and_funktion(
-#            setting, gas, r_axis_mm, rth_image[i_th, :], bg)
-        current_params, model, kws, method = get_params_and_funktion(
-            setting, gas, r_axis_mm, r_projection, bg)
-
-#        if gas == 'N2':
-#            line_params_list.append(n_voigt_with_bg_start_params(
-#                x=r_axis_mm, y=rth_image[i_th, :], n_lines=n_lines_fit,
-#                bg=(bg is not None)))
-#        elif gas == 'Kr':
-#            line_params_list.append(start_params(
-#                x=r_axis_mm, y=r_projection, n_lines=n_lines_fit, **kws))
-#
-#        current_params = line_params_list[-1]
-
         # map some stuff from the full projection to each line
         amp_scaling = rth_image[i_th, :].sum() / r_projection.sum()
-        for k, v in current_params.items():
-            v.value = params_r_proj[k].value
+        for k, v in line_initial_params.items():
+            v.value = r_proj_result.params[k].value
             if k.startswith(('amp', 'bg')):
                 v.value *= amp_scaling
                 v.min *= amp_scaling
@@ -539,39 +453,33 @@ def find_lines(rth_image, r_axis_mm, th_axis_rad,
 #                # Lock the centers
 #                v.vary = False
 
-#        # Make the actuall fit
-#        if gas == 'N2':
-#            model = n_voigt_with_bg_model
-#        elif gas == 'Kr':
-#            model = n_line_fit_model
-
         line_results_list.append(
             lmfit.minimize(model,
-                           current_params, method=method,
+                           line_initial_params, method=method,
                            args=(r_axis_mm, rth_image[i_th, :]),
                            kws=kws))
 
+        line_params_list.append(line_results_list[-1].params)
+
         for line in range(n_lines_store):
-            r[i_th, line] = current_params['center_{}'.format(line+1)].value
+            r[i_th, line] = line_params_list[-1][
+                'center_{}'.format(line+1)].value
             # For the width, we need to do some calculations
             # based on
             # https://en.wikipedia.org/wiki/Voigt_profile
-            fg = (current_params['sigma_{}'.format(line+1)].value *
-                  _gauss_fwhm_factor)
+            fg = (line_params_list[-1]['sigma_{}'.format(line+1)].value
+                * _gauss_fwhm_factor)
             try:
-                fl = current_params['gamma_{}'.format(line+1)].value * 2
+                fl = (line_params_list[-1][
+                    'gamma_{}'.format(line+1)].value * 2)
                 w[i_th, line] = (0.5346 * fl +
                                  np.sqrt(0.2166 * fl**2 + fg**2)) / 2
             except:
                 w[i_th, line] = fg / 2
             w[i_th, line] /= _gauss_fwhm_factor
-#            w[i_th, line] = current_params['sigma_{}'.format(line+1)].value
-#            w[i_th, line] = current_params['gamma_{}'.format(line+1)].value
-#            w[i_th, line] = current_params[ 'center_{}'.format(line+1)].stderr
-            a[i_th, line] = current_params[
+            a[i_th, line] = line_params_list[-1][
                 'amplitude_{}'.format(line+1)].value
-#        a[i_th, :] = n_line_fit_model(current_params, r[i_th, :], **line_type)
-        red_chi2[i_th] = line_results_list[i_th].redchi
+        red_chi2[i_th] = line_results_list[-1].redchi
 
         update_progress(i_th, n_th, verbose=verbose)
 
