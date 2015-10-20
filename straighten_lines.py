@@ -27,12 +27,13 @@ for data in data_list:
     r_th_img = data.get_e_rth_image(r_axis_mm, th_axis_rad)[0]
     r_proj = r_th_img.sum(axis=0)
 
-    proj_params = epicea.electron_calibration_helper.start_params(
+    proj_params_initial = epicea.electron_calibration_helper.start_params(
         r_axis_mm, r_proj, n_lines=2)
-    lmfit.minimize(line_model,
-                   proj_params,
-                   args=(r_axis_mm, r_proj),
-                   kws={'line_type': line})
+    proj_result = lmfit.minimize(line_model,
+                                 proj_params_initial,
+                                 args=(r_axis_mm, r_proj),
+                                 kws={'line_type': line})
+
 
     r_th_fig = plt_func.figure_wrapper('theta - r ' + data.name())
     ax_origaninl = plt.subplot(221)
@@ -44,7 +45,7 @@ for data in data_list:
 
     plt.subplot(223)
     plt.plot(r_axis_mm, r_proj)
-    plt.plot(r_axis_mm, line_model(proj_params, r_axis_mm,
+    plt.plot(r_axis_mm, line_model(proj_result.params, r_axis_mm,
                                    line_type=line), '--')
 
     centers = (r_th_img * r_axis_mm).sum(axis=1) / r_th_img.sum(axis=1)
@@ -91,12 +92,13 @@ for data in data_list:
                                                     th_axis_rad)
 
     r_proj_corrected = r_th_img_corrected.sum(axis=0)
-    proj_corrected_params = epicea.electron_calibration_helper.start_params(
-        r_axis_mm, r_proj_corrected, n_lines=2)
-    lmfit.minimize(line_model,
-                   proj_corrected_params,
-                   args=(r_axis_mm, r_proj_corrected),
-                   kws={'line_type': line})
+    proj_corrected_params_initial = \
+        epicea.electron_calibration_helper.start_params(
+            r_axis_mm, r_proj_corrected, n_lines=2)
+    proj_corrected_result = lmfit.minimize(line_model,
+                                           proj_corrected_params_initial,
+                                           args=(r_axis_mm, r_proj_corrected),
+                                           kws={'line_type': line})
 
     ax = r_th_fig.add_subplot(222)
     plt.sca(ax)
@@ -112,7 +114,7 @@ for data in data_list:
 
     plt.sca(r_th_fig.add_subplot(224))
     plt.plot(r_axis_mm, r_proj_corrected)
-    plt.plot(r_axis_mm, line_model(proj_corrected_params, r_axis_mm,
+    plt.plot(r_axis_mm, line_model(proj_corrected_result.params, r_axis_mm,
                                    line_type=line), '--')
 
     plt_func.figure_wrapper('waterfall ' + data.name())
