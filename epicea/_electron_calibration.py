@@ -61,55 +61,43 @@ class PositionToEnergyCalibration(object):
 #        self.intensity_scale_factors = 1.0 / np.mean(data[..., 3], axis=0)
 
         n_theta = len(self._theta)
+        
+        # Get some start parameters
+        r_to_e_start_params = _helper.r_to_e_conversion_start_params()
+        error_start_params = _helper.line_start_params([0]*(1+poly_order))
         # Iterate through all the angle bins
         for idx in range(n_theta):
+
+            # Fit the energy function
+            r_to_e_result = lmfit.minimize(_helper.r_to_e_conversion,
+                                           r_to_e_start_params,
+                                           args=(data[:, idx, 0],
+                                                 data[:, idx, 1]))
+
             # Add a parameters object to the energy params list
-#            self._energy_params_list.append(
-#                _helper.line_start_params([325] + [0]*(poly_order)))
-            self._energy_params_list.append(
-                _helper.r_to_e_conversion_start_params())
-
-            # Fit a polynomial to the datapoints in energy
-            # Thus filling the above inserted parameters with reall vallues
-#            lmfit.minimize(_helper.poly_line,
-#                           self._energy_params_list[idx],
-#                           args=(data[:, idx, 0], data[:, idx, 1],
-#                                 data[:, idx, 2]))
-            lmfit.minimize(_helper.r_to_e_conversion,
-                           self._energy_params_list[idx],
-                           args=(data[:, idx, 0], data[:, idx, 1]))
-
+            self._energy_params_list.append(r_to_e_result.params)
+            
+            # Fit the error function
+            error_result = lmfit.minimize(_helper.poly_line,
+                                          error_start_params,
+                                          args=(data[:, idx, 0],
+                                                data[:, idx, 2]))
             # Add parameters to the error listr
-            self._error_params_list.append(
-                _helper.line_start_params([0]*(1+poly_order)))
-            # and fit to populate them
-            lmfit.minimize(_helper.poly_line,
-                           self._error_params_list[idx],
-                           args=(data[:, idx, 0], data[:, idx, 2]))
-
-#            # Add parameters to the wieghts list
-#            self._weights_params_list.append(
-#                _helper.line_start_params([1] + [0]*(2)))
-#            # and populate the parameters through a fit
-#            I = np.isfinite(data[:, idx, 3])
-#            lmfit.minimize(_helper.poly_line,
-#                           self._weights_params_list[idx],
-#                           args=(data[I, idx, 0],
-#                                 1./data[I, idx, 3]))
-#            self._weight_interpolation_list.append(
-#                interp1d(data[:, idx, 0], data[:, idx, 3],
-#                         kind='slinear', bounds_error=False))
+            self._error_params_list.append(error_result.params)
 
             update_progress(idx, n_theta, verbose=verbose)
 
         
-        self._weights_params = _helper.line_start_params([1] + [0]*(poly_order))
+        weights_start_params = _helper.line_start_params(
+            [1] + [0]*(poly_order))
         a_sum = np.nansum(data[:, :, 3], axis=1)
         I = np.isfinite(a_sum)
-        lmfit.minimize(_helper.poly_line,
-                       self._weights_params,
-                       args=(data[I, :, 1].mean(1),
-                             1. / a_sum[I]))
+        weights_result = lmfit.minimize(_helper.poly_line,
+                                        weights_start_params,
+                                        args=(data[I, :, 1].mean(1),
+                                              1. / a_sum[I]))
+
+        self._weights_params = weights_result.params
 
         self.conversion_time_stamp = time.time()
         self._data_sum = np.sum(self._data)
