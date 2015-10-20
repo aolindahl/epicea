@@ -21,7 +21,7 @@ def load_file(file_path, verbose=False):
         bool value that determines if the function outputs diagnostics.
     """
     if verbose:
-        print 'Reading data from "{}".'.format(file_path)
+        print('Reading data from "{}".'.format(file_path))
     with open(file_path, 'r') as fp:
         head = []
         for i in range(2):
@@ -66,16 +66,16 @@ def add_file_as_h5_group(h5_file, name, file_path, verbose=False):
     """
     if name in h5_file.keys():
         if verbose:
-            print 'Group "{}" already exists.'.format(name)
+            print('Group "{}" already exists.'.format(name))
         return h5_file[name]
     elif file_path is None:
         raise AttributeError('No raw data given and not an existing group.')
     if verbose:
-        print 'Creating group "{}".'.format(name)
+        print('Creating group "{}".'.format(name))
     group = h5_file.create_group(name)
     data, col_idx = load_file(file_path, verbose=verbose)
 
-    for name, col in col_idx.iteritems():
+    for name, col in col_idx.items():
         if name in ['num_i', 'electrons_wave_index',
                     'coincidence_order', 'num_random_hits', 'num_e',
                     'event_id', 'ions_wave_index',
@@ -232,7 +232,8 @@ def center_histogram(data, centers, weights=None):
     return hist
 
 
-def center_histogram_2d(x_data, y_data, x_centers, y_centers=None):
+def center_histogram_2d(x_data, y_data, x_centers, y_centers=None,
+                        weights=None):
     """Rerurn histogram array corresponding to given centers"""
 
     x_limits = limits_from_centers(x_centers)
@@ -240,5 +241,6 @@ def center_histogram_2d(x_data, y_data, x_centers, y_centers=None):
         y_limits = x_limits
     else:
         y_limits = limits_from_centers(y_centers)
-    hist, _, _ = _np.histogram2d(x_data, y_data, [x_limits, y_limits])
+    hist, _, _ = _np.histogram2d(x_data, y_data, [x_limits, y_limits],
+                                 weights=weights)
     return hist.T
