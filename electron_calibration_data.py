@@ -48,8 +48,8 @@ def get_data_in_list(center_energy, verbose=False):
     # 373 eV pass energy
     if 373 == center_energy:
         energy_and_name = {
-#            471.0: 'CalibrationsForKE373eV/Kr_0023',
-#            470.0: 'CalibrationsForKE373eV/Kr_0024',
+            471.0: 'CalibrationsForKE373eV/Kr_0023',
+            470.0: 'CalibrationsForKE373eV/Kr_0024',
             469.0: 'CalibrationsForKE373eV/Kr_0022',
             467.0: 'CalibrationsForKE373eV/Kr_calib_00160021',
             465.0: 'CalibrationsForKE373eV/Kr_calib_00160020',
@@ -83,12 +83,12 @@ def get_data_in_list(center_energy, verbose=False):
     # 366 eV pass energy
     elif center_energy == 366:
         energy_and_name = {
-#            453.3: 'CalibrationsForKE366eV/Kr_KEc366eV_PE453eV0007',
+            453.3: 'CalibrationsForKE366eV/Kr_KEc366eV_PE453eV0007',
             455.3: 'CalibrationsForKE366eV/Kr_KEc366eV_PE455eV0006',
             457.3: 'CalibrationsForKE366eV/Kr_KEc366eV_PE457eV0005',
             459.3: 'CalibrationsForKE366eV/Kr_KEc366eV_PE459eV0002',
             461.3: 'CalibrationsForKE366eV/Kr_KEc366eV_PE461eV0003',
-            # 463.3: 'CalibrationsForKE366eV/Kr_KEc366eV_PE463eV0004',
+            463.3: 'CalibrationsForKE366eV/Kr_KEc366eV_PE463eV0004',
             }
 
         data_scaling = {
@@ -116,7 +116,7 @@ def get_data_in_list(center_energy, verbose=False):
     # 357 eV pass energy
     elif center_energy == 357:
         energy_and_name = {
-#            749.0: 'CalibrationsForKE357eV/N2_calib_0038',
+            749.0: 'CalibrationsForKE357eV/N2_calib_0038',
             753.5: 'CalibrationsForKE357eV/N2_calib_0039',
             758.0: 'CalibrationsForKE357eV/N2_calib_0040',
             762.5: 'CalibrationsForKE357eV/N2_calib_0041',

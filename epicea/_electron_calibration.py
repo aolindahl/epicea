@@ -13,6 +13,7 @@ import time
 from . import _electron_calibration_helper as _helper
 from . progress import update_progress
 
+_change_time = 1444808450
 
 class PositionToEnergyCalibration(object):
     def __init__(self):
@@ -51,27 +52,32 @@ class PositionToEnergyCalibration(object):
         # Maka some parameter lists, there will be one element for each angle
         self._energy_params_list = []
         self._error_params_list = []
-        self._weights_params_list = []
-        self._weight_interpolation_list = []
+#        self._weights_params_list = []
+#        self._weight_interpolation_list = []
 
         # Easier acess to the data
         data = np.array(self._data)
 
-        self.intensity_scale_factors = 1.0 / np.mean(data[..., 3], axis=0)
+#        self.intensity_scale_factors = 1.0 / np.mean(data[..., 3], axis=0)
 
         n_theta = len(self._theta)
         # Iterate through all the angle bins
         for idx in range(n_theta):
             # Add a parameters object to the energy params list
+#            self._energy_params_list.append(
+#                _helper.line_start_params([325] + [0]*(poly_order)))
             self._energy_params_list.append(
-                _helper.line_start_params([325] + [0]*(poly_order)))
+                _helper.r_to_e_conversion_start_params())
 
             # Fit a polynomial to the datapoints in energy
             # Thus filling the above inserted parameters with reall vallues
-            lmfit.minimize(_helper.poly_line,
+#            lmfit.minimize(_helper.poly_line,
+#                           self._energy_params_list[idx],
+#                           args=(data[:, idx, 0], data[:, idx, 1],
+#                                 data[:, idx, 2]))
+            lmfit.minimize(_helper.r_to_e_conversion,
                            self._energy_params_list[idx],
-                           args=(data[:, idx, 0], data[:, idx, 1],
-                                 data[:, idx, 2]))
+                           args=(data[:, idx, 0], data[:, idx, 1]))
 
             # Add parameters to the error listr
             self._error_params_list.append(
@@ -81,21 +87,29 @@ class PositionToEnergyCalibration(object):
                            self._error_params_list[idx],
                            args=(data[:, idx, 0], data[:, idx, 2]))
 
-            # Add parameters to the wieghts list
-            self._weights_params_list.append(
-                _helper.line_start_params([1] + [0]*(poly_order)))
-            # and populate the parameters through a fit
-            lmfit.minimize(_helper.poly_line,
-                           self._weights_params_list[idx],
-                           args=(data[:, idx, 0],
-                                 data[:, idx, 3] *
-                                 self.intensity_scale_factors[idx],
-                                 data[:, idx, 2]))
+#            # Add parameters to the wieghts list
+#            self._weights_params_list.append(
+#                _helper.line_start_params([1] + [0]*(2)))
+#            # and populate the parameters through a fit
+#            I = np.isfinite(data[:, idx, 3])
+#            lmfit.minimize(_helper.poly_line,
+#                           self._weights_params_list[idx],
+#                           args=(data[I, idx, 0],
+#                                 1./data[I, idx, 3]))
 #            self._weight_interpolation_list.append(
 #                interp1d(data[:, idx, 0], data[:, idx, 3],
 #                         kind='slinear', bounds_error=False))
 
             update_progress(idx, n_theta, verbose=verbose)
+
+        
+        self._weights_params = _helper.line_start_params([1] + [0]*(poly_order))
+        a_sum = np.nansum(data[:, :, 3], axis=1)
+        I = np.isfinite(a_sum)
+        lmfit.minimize(_helper.poly_line,
+                       self._weights_params,
+                       args=(data[I, :, 1].mean(1),
+                             1. / a_sum[I]))
 
         self.conversion_time_stamp = time.time()
         self._data_sum = np.sum(self._data)
@@ -113,7 +127,7 @@ class PositionToEnergyCalibration(object):
 
         energies = np.ones_like(radii) * np.nan
         errors = np.ones_like(radii) * np.nan
-        weights = np.ones_like(radii) * np.nan
+#        weights = np.ones_like(radii) * np.nan
 
         idx_list = np.round(
             (angles - self._theta[0]) / self._d_theta).astype(int)
@@ -123,9 +137,14 @@ class PositionToEnergyCalibration(object):
         for i in range(len(self._theta)):
             theta_idx_mask = idx_list == i
 
-            energies[theta_idx_mask] = _helper.poly_line(
+            e_funk = (_helper.poly_line if
+                      'r0' not in self._energy_params_list[i] else
+                      _helper.r_to_e_conversion)
+            energies[theta_idx_mask] = e_funk(
                 self._energy_params_list[i], radii[theta_idx_mask])
 
+#            print('\n')
+#            print(self._error_params_list[i])
             errors[theta_idx_mask] = _helper.poly_line(
                 self._error_params_list[i], radii[theta_idx_mask])
 
@@ -133,50 +152,61 @@ class PositionToEnergyCalibration(object):
 #            energies.append(poly_line(self._energy_params_list[idx], r))
 #            errors.append(poly_line(self._error_params_list[idx], r))
 
-            weights[theta_idx_mask] = _helper.poly_line(
-                self._weights_params_list[i], radii[theta_idx_mask])
+#            weights[theta_idx_mask] = _helper.poly_line(
+#                self._weights_params_list[i], radii[theta_idx_mask])
 #            weights[theta_idx_mask] = self._weight_interpolation_list[i](
 #                radii[theta_idx_mask])
 
-        invalid_energy = ((energies < self._energy_min) |
-                          (self._energy_max < energies))
+        weights = _helper.poly_line(self._weights_params, energies)
 
-        for data in [energies, errors, weights]:
-            data[invalid_energy] = np.nan
+        try:
+            invalid_energy = ((energies < self._energy_min) |
+                              (self._energy_max < energies))
+        except RuntimeWarning as warn:
+            print(warn.args)
+            print(warn.with_traceback)
+
+#        for data in [energies, errors, weights]:
+#            data[invalid_energy] = np.nan
 
         return energies, errors, weights
 
     def get_data_copy(self):
         data = np.array(self._data)
-        data[..., 3] *= self.intensity_scale_factors
+#        data[..., 3] *= self.intensity_scale_factors
         return np.array(self._theta), data
 
     _PROP_NAME_LIST = ['value', 'stderr']
 
     def save_to_file(self, file_name):
         with h5py.File(file_name, 'w') as file_ref:
+            b_type = h5py.special_dtype(vlen=bytes)         
+            
             file_ref.create_dataset('theta', data=self._theta)
             file_ref.create_dataset('data', data=np.array(self._data))
-            file_ref.create_dataset('intensity_scale_factors',
-                                    data=self.intensity_scale_factors)
+#            file_ref.create_dataset('intensity_scale_factors',
+#                                    data=self.intensity_scale_factors)
 
             file_ref.create_dataset('energy_min', data=self._energy_min)
             file_ref.create_dataset('energy_max', data=self._energy_max)
 
-            energy_group = file_ref.create_group('energy_params')
-            error_group = file_ref.create_group('error_params')
-            weight_group = file_ref.create_group('weigt_params')
-            for group, params in zip([energy_group, error_group, weight_group],
-                                     [self._energy_params_list,
-                                      self._error_params_list,
-                                      self._weights_params_list]):
-                for a_i in params[0].keys():
-                    a_group = group.create_group(a_i)
-                    for prop_name in self._PROP_NAME_LIST:
-                        a_group.create_dataset(
-                            prop_name,
-                            data=[getattr(par[a_i], prop_name) for
-                                  par in params])
+            file_ref.create_dataset('weight_params',
+                                    data=self._weights_params.dumps())
+
+            energy_dset = file_ref.create_dataset(
+                'energy_params',
+                (len(self._energy_params_list), ),
+                dtype=b_type)
+            error_dset = file_ref.create_dataset(
+                'error_params',
+                (len(self._error_params_list), ),
+                dtype=b_type)
+            for dset, params_list in zip([energy_dset, error_dset],
+                                         [self._energy_params_list,
+                                          self._error_params_list]):
+                for i, params in enumerate(params_list):
+                    dset[i] = params.dumps()
+
             file_ref.attrs['time_stamp'] = self.conversion_time_stamp
             file_ref.attrs['data_sum'] = self._data_sum
 
@@ -186,28 +216,26 @@ class PositionToEnergyCalibration(object):
         with h5py.File(file_name, 'r') as file_ref:
             self._set_theta(file_ref['theta'][:])
             self._data = [d for d in file_ref['data'].value]
-            self.intensity_scale_factors = \
-                file_ref['intensity_scale_factors'].value
+#            self.intensity_scale_factors = \
+#                file_ref['intensity_scale_factors'].value
             self._energy_min = file_ref['energy_min'].value
             self._energy_max = file_ref['energy_max'].value
             self._energy_params_list = []
             self._error_params_list = []
-            self._weights_params_list = []
-            energy_group = file_ref['energy_params']
-            error_group = file_ref['error_params']
-            weight_group = file_ref['weigt_params']
-            for group, params in zip([energy_group, error_group, weight_group],
-                                     [self._energy_params_list,
-                                      self._error_params_list,
-                                      self._weights_params_list]):
+
+            self._weights_params = lmfit.Parameters()
+            self._weights_params.loads(file_ref['weight_params'].value)
+
+            energy_dset = file_ref['energy_params']
+            error_dset = file_ref['error_params']
+            for dset, params_list in zip([energy_dset, error_dset],
+                                         [self._energy_params_list,
+                                          self._error_params_list]):
                 for i in range(self._n_theta):
-                    params.append(lmfit.Parameters())
-                    for a_i in group.keys():
-                        a_group = group[a_i]
-                        params[-1].add(a_i)
-                        for prop_name in self._PROP_NAME_LIST:
-                            setattr(params[-1][a_i], prop_name,
-                                    a_group[prop_name][i])
+                    params_list.append(lmfit.Parameters())
+                    params_list[-1].loads(dset[i].decode('utf-8'))
+            
+
             if 'time_stamp' in file_ref.attrs.keys():
                 self.conversion_time_stamp = file_ref.attrs['time_stamp']
                 self._data_sum = file_ref.attrs['data_sum']
@@ -217,6 +245,9 @@ class PositionToEnergyCalibration(object):
 
     def create_or_load_conversion(self, file_name, compare_time_stmp,
                                   poly_order=2, verbose=False):
+
+        compare_time_stmp = max(compare_time_stmp, _change_time)    
+
         try:
             with h5py.File(file_name, 'r') as file_ref:
                 file_time_stamp = file_ref.attrs['time_stamp']

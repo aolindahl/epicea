@@ -232,7 +232,8 @@ def center_histogram(data, centers, weights=None):
     return hist
 
 
-def center_histogram_2d(x_data, y_data, x_centers, y_centers=None):
+def center_histogram_2d(x_data, y_data, x_centers, y_centers=None,
+                        weights=None):
     """Rerurn histogram array corresponding to given centers"""
 
     x_limits = limits_from_centers(x_centers)
@@ -240,5 +241,6 @@ def center_histogram_2d(x_data, y_data, x_centers, y_centers=None):
         y_limits = x_limits
     else:
         y_limits = limits_from_centers(y_centers)
-    hist, _, _ = _np.histogram2d(x_data, y_data, [x_limits, y_limits])
+    hist, _, _ = _np.histogram2d(x_data, y_data, [x_limits, y_limits],
+                                 weights=weights)
     return hist.T

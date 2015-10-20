@@ -117,6 +117,25 @@ class GroupContainer(object):
                                             data=data)
         setattr(self, name, ds)
 
+#    def calculate_hit_time(self):
+#        if hasattr(self, 'hit_time'):
+#            return
+#
+#        if hasattr(self, 'psd_sig_w1'):
+#            t = np.nanmean([self.psd_sig_u1.value, self.psd_sig_u2.value,
+#                            self.psd_sig_v1.value, self.psd_sig_v2.value,
+#                            self.psd_sig_w1.value, self.psd_sig_w2.value],
+#                            axis=0)
+#
+#        elif hasattr(self, 'psd_sig_u1'):
+#            t = np.nanmean([self.psd_sig_u1.value, self.psd_sig_u2.value,
+#                            self.psd_sig_v1.value, self.psd_sig_v2.value],
+#                            axis=0)
+#
+#        else:
+#            return
+#
+#        self.add_parameter('hit_time', t)
 
 _GROUP_NAMES = ['electrons', 'ions', 'events']
 
@@ -161,12 +180,16 @@ class DataSet(object):
                     GroupContainer(self._h5_file, self._data_path,
                                    group_name, verbose=self._verbose))
 
+#            getattr(self, group_name).calculate_hit_time()
+
         try:
             if 'polar_recalculated' not in self._h5_file['electrons'].attrs:
                 self.electrons.recalculate_polar_coordinates()
                 self._h5_file['electrons'].attrs['polar_recalculated'] = True
         except:
             print('Problems with the polar coordinates.')
+
+#        self.calculate_event_times()
 
         self._filters = {}
 
@@ -202,6 +225,25 @@ class DataSet(object):
 
     def electron_center_energy(self):
         return self._electron_center_energy
+
+#    def calculate_event_times(self):
+#        e_idx = self.events.electrons_wave_index.value
+#        has_e = e_idx >= 0
+#        e1_time = np.nan * np.ones_like(e_idx, dtype=float)
+#        e1_time[has_e] = self.electrons.hit_time.value[e_idx[has_e]]
+#        
+#        self.events.add_parameter('e1_time', e1_time)
+#
+#        ions_hit_times = self.ions.hit_time.value
+#        i_idx = self.events.ions_wave_index.value
+#        i_num = self.events.num_i.value
+#
+#        for i in range(2):
+#            has_i = i < i_num
+#            i_time = np.nan * np.ones_like(i_idx, dtype=float)
+#            i_time[has_i] = ions_hit_times[i_idx[has_i] + i]
+#        
+#            self.events.add_parameter('i{}_time'.format(i+1), i_time)
 
     def list_filters(self):
         """Print a list of existing filters."""
@@ -597,7 +639,7 @@ class DataSet(object):
             old_time_stamp = 0
 
         if old_time_stamp < max((calibration.conversion_time_stamp,
-                                 1439382216)):
+                                 2439382216)):
             if verbose:
                 print('Recalculate electron energies.', flush=True)
             energies, errors, weights = calibration.get_energies(
@@ -642,7 +684,7 @@ class DataSet(object):
             compare_time_stamp=max(
                 (compare_time_stamp,
                  self.electrons.energy.attrs['time_stamp'],
-                 1439384232)),
+                 1445269060)),
             verbose=verbose)
 
         if spectrum.size == 0:
@@ -673,17 +715,23 @@ class DataSetList(object):
         for data_set in self._dataset_list:
             yield data_set
 
-    def __getitem__(self, name):
+    def _check_index_validity(self, name):
+        # If the index is an int
         if isinstance(name, int):
+            # Check if it is in range
             if (0 <= name) and (name < len(self._dataset_list)):
-                return self._dataset_list[name]
+                return name
             raise IndexError('Index={} out of'.format(name) +
                              ' bounds for lenght {} list'.format(
                 len(self._dataset_list)))
         if name in self._name_index_dict:
-            return self._dataset_list[self._name_index_dict[name]]
+            return self._name_index_dict[name]
         raise IndexError('The data set list cannot be indexed with' +
                          ' "{}", it is not a valid name.'.format(name))
+        return None
+
+    def __getitem__(self, name):
+        return self._dataset_list[self._check_index_validity(name)]
 
     def add_dataset(self, name, h5_path, raw_data_path='',
                     photon_energy=None, electron_center_energy=None,
@@ -702,6 +750,26 @@ class DataSetList(object):
                     **kwargs))
 
         self._name_index_dict[name] = len(self._dataset_list) - 1
+
+    def pop(self, name):
+        try:
+            index = self._check_index_validity(name)
+        except IndexError as e:
+            print(e.args)
+            print('No action taken by pop.')
+            return None
+            
+        # Remove the dataset from the list
+        dataset = self._dataset_list.pop(index)
+        # Remove the name from the name index list
+        del self._name_index_dict[dataset.name()]
+        # Adjust the remaining indexes
+        for k, v in self._name_index_dict.items():
+            if index < v:
+                self._name_index_dict[k] -= 1
+
+        return dataset
+        
 
     def keys(self):
         return [k for k in self._name_index_dict]

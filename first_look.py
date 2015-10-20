@@ -8,13 +8,11 @@ Created on Fri Feb 13 12:03:56 2015
 import numpy as np
 import matplotlib.pyplot as plt
 import os.path
+from scipy.misc import imread
 
 import plt_func
 import global_parameters as glob
-if 'epicea' not in locals():
-    import epicea
-
-plt.ion()
+import epicea
 
 ANGLE_CUT = 2.7
 
@@ -39,20 +37,42 @@ def make_filters(data, verbose=False):
                     {'filter_name_list':
                         ['two_ions_events', 'rand_start_events']},
                     verbose=verbose)
-    data.get_filter('NN_O_events',
+                    
+    data.get_filter('NN_O_time_sum',
                     epicea.ff.two_ions_time_sum_events,
                     {'t_sum_min_us':
                         glob.NN_O_TIME_SUM_RANGE_US[data.name()][0],
                      't_sum_max_us':
                          glob.NN_O_TIME_SUM_RANGE_US[data.name()][1]},
                     verbose=verbose)
-    data.get_filter('NO_N_events',
+    data.get_filter('NN_O_time_diff',
+                    epicea.ff.two_ions_time_diff_events,
+                    {'t_diff_min_us':
+                        glob.NN_O_TIME_DIFF_RANGE_US[data.name()][0],
+                     't_diff_max_us':
+                         glob.NN_O_TIME_DIFF_RANGE_US[data.name()][1]},
+                    verbose=verbose, update=True)
+    data.get_filter('NN_O_events', epicea.ff.combine,
+                    {'filter_name_list': ['NN_O_time_sum', 'NN_O_time_diff']},
+                    verbose=verbose, update=True)
+
+    data.get_filter('NO_N_time_sum',
                     epicea.ff.two_ions_time_sum_events,
                     {'t_sum_min_us':
                         glob.NO_N_TIME_SUM_RANGE_US[data.name()][0],
                      't_sum_max_us':
                          glob.NO_N_TIME_SUM_RANGE_US[data.name()][1]},
                     verbose=verbose)
+    data.get_filter('NO_N_time_diff',
+                    epicea.ff.two_ions_time_diff_events,
+                    {'t_diff_min_us':
+                        glob.NO_N_TIME_DIFF_RANGE_US[data.name()][0],
+                     't_diff_max_us':
+                         glob.NO_N_TIME_DIFF_RANGE_US[data.name()][1]},
+                    verbose=verbose, update=True)
+    data.get_filter('NO_N_events', epicea.ff.combine,
+                    {'filter_name_list': ['NO_N_time_sum', 'NO_N_time_diff']},
+                    verbose=verbose, update=True)
 
     # Ion filters
     data.get_filter('e_start_ions',
@@ -78,12 +98,12 @@ def make_filters(data, verbose=False):
     data.get_filter('NN_O_events_ions',
                     epicea.ff.events_filtered_ions,
                     {'events_filter_name': 'NN_O_events'},
-                    verbose=verbose)
+                    verbose=verbose, update=True)
 
     data.get_filter('NO_N_events_ions',
                     epicea.ff.events_filtered_ions,
                     {'events_filter_name': 'NO_N_events'},
-                    verbose=verbose)
+                    verbose=verbose, update=True)
 
     # Electron filters
     data.get_filter('has_position_electrons',
@@ -106,7 +126,7 @@ def plot_ion_tof(data, verbose=False):
     if verbose:
         print('\nPlotting tof spectra')
     plt_func.figure_wrapper('Ion TOF {}'.format(data.name()))
-    plt.subplot(211)
+    ax1 = plt.subplot(211)
 
     t_axis_us = np.arange(2., 6.5, 0.01)
     t_axis_ns = t_axis_us * 1e6
@@ -134,7 +154,7 @@ def plot_ion_tof(data, verbose=False):
     plt_func.legend_wrapper()
     plt_func.tick_fontsize()
 
-    plt.subplot(212)
+    plt.subplot(212, sharex=ax1)
     i_tof_NN_O = data.get_i_tof_spectrum(
         t_axis_ns, data.get_filter('NN_O_events_ions'))
     i_tof_NO_N = data.get_i_tof_spectrum(
@@ -419,18 +439,32 @@ def plot_two_ion_corelations(data, verbose=False):
         tof_tof_sym_hist = tof_tof_hist + tof_tof_hist.T
 #        plt_func.imshow_wrapper(tof_tof_sym_hist, t_axis_us)
         plt_func.imshow_wrapper(np.log(tof_tof_sym_hist+1), t_axis_us)
-        plt.plot(t_axis_us,
-                 glob.NN_O_TIME_SUM_RANGE_US[data.name()][0] - t_axis_us,
-                 'y', label='NN+ O+ selection')
-        plt.plot(t_axis_us,
-                 glob.NN_O_TIME_SUM_RANGE_US[data.name()][1] - t_axis_us,
-                 'y')
-        plt.plot(t_axis_us,
-                 glob.NO_N_TIME_SUM_RANGE_US[data.name()][0] - t_axis_us,
-                 'm', label='NO+ N+ selection')
-        plt.plot(t_axis_us,
-                 glob.NO_N_TIME_SUM_RANGE_US[data.name()][1] - t_axis_us,
-                 'm')
+#        plt.plot(t_axis_us,
+#                 glob.NN_O_TIME_SUM_RANGE_US[data.name()][0] - t_axis_us,
+#                 'y', label='NN+ O+ selection')
+#        plt.plot(t_axis_us,
+#                 glob.NN_O_TIME_SUM_RANGE_US[data.name()][1] - t_axis_us,
+#                 'y')
+#        plt.plot(t_axis_us,
+#                 glob.NN_O_TIME_DIFF_RANGE_US[data.name()][0] + t_axis_us,
+#                 'y')
+#        plt.plot(t_axis_us,
+#                 glob.NN_O_TIME_DIFF_RANGE_US[data.name()][1] + t_axis_us,
+#                 'y')
+
+        for sum_range, diff_range, label, c in zip(
+            [glob.NO_N_TIME_SUM_RANGE_US[data.name()],
+             glob.NN_O_TIME_SUM_RANGE_US[data.name()]],
+            [glob.NO_N_TIME_DIFF_RANGE_US[data.name()],
+             glob.NN_O_TIME_DIFF_RANGE_US[data.name()]],
+            ['NO+ N+ selection', 'NN+ O+ selection'],
+            ['m', 'y']):
+                s = sum_range[[0,1,1,0,0]]
+                d = diff_range[[1,1,0,0,1]]
+                x = (s-d)/2
+                y = (s+d)/2
+                plt.plot(x, y, c, label=label)
+
         plt_func.title_wrapper(names[i])
         plt.axis([t_axis_us.min(), t_axis_us.max(),
                   t_axis_us.min(), t_axis_us.max()])
@@ -618,20 +652,20 @@ def plot_e_spec(data, verbose=False):
 def plot_combined_e_spec(data_list, verbose=False):
     full_fig = plt_func.figure_wrapper('all electrons')
     full_412_ax = full_fig.add_subplot(211)
-    full_430_ax = full_fig.add_subplot(212)
+    full_430_ax = full_fig.add_subplot(212, sharex=full_412_ax)
     nn_o_fig = plt_func.figure_wrapper('NN + O')
-    nn_o_412_ax = nn_o_fig.add_subplot(211)
-    nn_o_430_ax = nn_o_fig.add_subplot(212)
+    nn_o_412_ax = nn_o_fig.add_subplot(211, sharex=full_412_ax)
+    nn_o_430_ax = nn_o_fig.add_subplot(212, sharex=full_412_ax)
     no_n_fig = plt_func.figure_wrapper('NO + N')
-    no_n_412_ax = no_n_fig.add_subplot(211)
-    no_n_430_ax = no_n_fig.add_subplot(212)
+    no_n_412_ax = no_n_fig.add_subplot(211, sharex=full_412_ax)
+    no_n_430_ax = no_n_fig.add_subplot(212, sharex=full_412_ax)
 
     with_fig = plt_func.figure_wrapper('energy uncertainty')
     with_ax = None
     with_ax_list = []
 
-    e_axis_ev = np.linspace(340, 380, 2**12+1)[1::2]
-    w_axis_ev = np.linspace(0, 10, 2**10+1)[1::2]
+    e_axis_ev = np.linspace(343, 376, 2**9+1)[1::2]
+    w_axis_ev = np.linspace(0, 0.5, 2**10+1)[1::2]
 
     for i_data, data in enumerate(data_list):
         with_ax = with_fig.add_subplot(2, 3, i_data + 1, sharex=with_ax)
@@ -641,17 +675,27 @@ def plot_combined_e_spec(data_list, verbose=False):
         with_ax.semilogy(w_axis_ev, hist)
         plt_func.title_wrapper(data.name())
 
+        detector_angle_filter = data.get_filter(
+            'detector_angle',
+            filter_function=epicea.ff.electron_angle_range,
+            filter_kw_params={'angle_range_list': [0, 7]},
+            verbose=verbose, update=True)
+
         uncertainty_filter_electrons = data.get_filter(
-            'energy_uncertainty_02',
+            'energy_uncertainty_inf',
             filter_function=epicea.ff.electron_energy_uncertainty,
-            filter_kw_params={'max_uncertainty': 0.2},
-            verbose=verbose)
+            filter_kw_params={'max_uncertainty': np.inf},
+            verbose=verbose, update=True)
+
+        uncertainty_filter_electrons *= detector_angle_filter
             
 
         NN_O_events_electrons = data.get_filter('NN_O_events_electrons',
                                                 verbose=verbose)
+        NN_O_events_electrons *= detector_angle_filter
         NO_N_events_electrons = data.get_filter('NO_N_events_electrons',
                                                 verbose=verbose)
+        NO_N_events_electrons *= detector_angle_filter
 
         e_energy_dist, _ = data.get_e_spectrum(
             e_axis_ev, electrons_filter=uncertainty_filter_electrons,
@@ -672,17 +716,54 @@ def plot_combined_e_spec(data_list, verbose=False):
         ax_full.plot(e_axis_ev, e_energy_dist, '.-',
                      label='full {}'.format(data.name()))
         ax_nn_o.plot(e_axis_ev, e_NN_O_energy_dist,  '.-',
-                     label=r'N$_2$$^+$ + O$^+$ {}'.format(data.name))
+                     label=r'N$_2$$^+$ + O$^+$ {}'.format(data.name()))
         ax_no_n.plot(e_axis_ev, e_NO_N_energy_dist,  '.-',
-                     label=r'NO$^+$ + N$^+$ {}'.format(data.name))
+                     label=r'NO$^+$ + N$^+$ {}'.format(data.name()))
 
+
+    grifith_img = imread('Grif2.jpg')
     for ax in [nn_o_412_ax, nn_o_430_ax, no_n_412_ax, no_n_430_ax,
                full_412_ax, full_430_ax]:
-        plt_func.legend_wrapper(ax)
+        y_extent = ax.get_ylim()[1] * 1.05
+        ax.imshow(grifith_img, aspect='auto',
+                  extent=(335, 379.65, -0.044*y_extent, y_extent))
+        
+        plt.sca(ax)
+        plt.legend(loc='best')
+        plt.xlabel('auger energu (eV)')
+        plt.ylabel('signal (arb. u)')
+#        plt_func.legend_wrapper(ax)
+
+    full_fig.savefig('first_look_figures/full_spectra.pdf')
+    nn_o_fig.savefig('first_look_figures/nn_o_spectra.pdf')
+    no_n_fig.savefig('first_look_figures/no_n_spectra.pdf')
+
 # %%
+
+def hit_times(data):
+    name = data.name()
+    hit_times_fig = plt.figure('hit times correlations {}'.format(name))
+    hit_times_fig.clf()
+
+    nn_o_ions = data.get_filter('NN_O_events_ions')
+    tof = data.ions.tof_falling_edge.value
+    r = data.ions.pos_r.value
+    
+    I = nn_o_ions & (tof < 4e6) & (0 <= r)
+
+    plt.subplot(221)
+    plt.hist(tof[I], bins=2**8)
+    
+    plt.subplot(223)
+    plt.hist(r[I], bins=2**8)
+    
+    plt.subplot(122)
+    plt.hist2d(r[I], tof[I], bins=2**6)
+
 
 if __name__ == '__main__':
     # %%
+    plt.ion()
 
     verbose = True
     if 'data_list' not in locals():
@@ -692,12 +773,12 @@ if __name__ == '__main__':
 
     # data_info list: [photon_energy, center_energy, data_path]
     data_info = [
-        [430, 373, 'N2O_0029_KE373_hv430eV'],
-        [412, 373, 'N2O_0031_KE373_hv412eV'],
+#        [430, 373, 'N2O_0029_KE373_hv430eV'],
+#        [412, 373, 'N2O_0031_KE373_hv412eV'],
         [430, 366, 'N2O_366PE_430eV_0014'],
         [412, 366, 'N2O_366PE_4119eV_combined'],
-        [430, 357, 'N2O_KE357_hv430p9_0047'],
-        [412, 357, 'N2O_KE357_hv412p9_0049'],
+#        [430, 357, 'N2O_KE357_hv430p9_0047'],
+#        [412, 357, 'N2O_KE357_hv412p9_0049'],
 #        [560, 500, 'N2O_500PE_560eV_0017']
         ]
 
@@ -747,8 +828,12 @@ if __name__ == '__main__':
 #        plot_two_ion_corelations(data, verbose=verbose)
     # %%
 
-#    for data in data_list:
-#        plot_e_spec(data, verbose=False)
+    for data in data_list:
+        plot_e_spec(data, verbose=False)
 # %%
 
     plot_combined_e_spec(data_list, verbose=True)
+# %%
+
+#    for data in data_list:
+#        hit_times(data)

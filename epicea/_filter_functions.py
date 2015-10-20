@@ -105,6 +105,35 @@ def two_ions_time_sum_events(data,
     return mask
 
 
+def two_ions_time_diff_events(data,
+                             t_diff_min_us=-np.inf,
+                             t_diff_max_us=np.inf,
+                             verbose=False):
+    two_ions_e_start_events_mask = data.get_filter(
+        'two_ions_e_start_events',
+        two_ions_e_start_events,
+        verbose=verbose)
+    two_ions_e_start_events_ions = data.get_filter(
+        'two_ions_e_start_events_ions',
+        events_filtered_ions,
+        {'events_filter_name': 'two_ions_e_start_events'},
+        verbose=verbose)
+
+    time_diffs = data.ions.tof_falling_edge[two_ions_e_start_events_ions]
+    time_diffs = -np.diff(time_diffs.reshape(-1, 2),axis=1).flatten()
+    if verbose:
+        print('time_diffs =', time_diffs)
+    wanted_time_diffs = ((t_diff_min_us * 1e6 < time_diffs) &
+                        (time_diffs < t_diff_max_us * 1e6))
+
+    mask = np.zeros_like(two_ions_e_start_events_mask, dtype=bool)
+    partial_mask = np.zeros_like(wanted_time_diffs, dtype=bool)
+    partial_mask[wanted_time_diffs] = True
+    mask[two_ions_e_start_events_mask] = partial_mask
+
+    return mask
+
+
 def has_energy_electrons(data, verbose=False):
     return np.isfinite(data.electrons.energy)
 
@@ -124,6 +153,27 @@ def electron_energy_uncertainty(data,
 
     return mask
 
+
+def electron_angle_range(data, angle_range_list=[0, np.pi], verbose=False):
+    has_energy_electrons_mask = data.get_filter(
+        'has_energy_electrons',
+        has_energy_electrons,
+        verbose=verbose)
+
+    try:
+        len(angle_range_list[0])
+    except TypeError:
+        angle_range_list = [angle_range_list]
+            
+
+    mask = np.ones_like(has_energy_electrons_mask, dtype=bool)
+    angles = data.electrons.pos_t[has_energy_electrons_mask]
+    for angle_range in angle_range_list:
+#        print('Angle range = {}'.format(angle)}
+        mask[has_energy_electrons_mask] *= ((angle_range[0] <= angles) &
+                                            (angles <= angle_range[1]))
+
+    return mask
 
 def combine(data, filter_name_list, logic=np.all, verbose=False):
     filter_list = [data.get_filter(filter_name, verbose=verbose) for

@@ -67,7 +67,11 @@ def bar_wrapper(x, y, color=None, label=None, verbose=False):
             label=label)
 
 
-def imshow_wrapper(img, x_centers, y_centers=None, ax=plt, kw_args={}):
+def imshow_wrapper(img, x_centers, y_centers=None, ax=None, kw_args={}):
+    if ax is not None:
+        old_ax = plt.gca()
+        plt.sca(ax)
+
     x_step = np.diff(x_centers).mean(dtype=float)
     x_min = x_centers.min() - x_step/2
     x_max = x_centers.max() + x_step/2
@@ -79,9 +83,13 @@ def imshow_wrapper(img, x_centers, y_centers=None, ax=plt, kw_args={}):
         y_max = y_centers.max() + y_step/2
 
     axis = (x_min, x_max, y_min, y_max)
-    img_ax = ax.imshow(img, extent=axis, origin='lower',
+    img_ax = plt.imshow(img, extent=axis, origin='lower',
                     interpolation='none', **kw_args)
-    ax.axis(axis)
+    plt.axis(axis)
+    
+    if ax is not None:
+        plt.sca(old_ax)
+
     return img_ax
 
 

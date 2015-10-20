@@ -41,3 +41,28 @@ NO_N_TIME_SUM_RANGE_US['412_357'] = np.array([8.59, 8.63])
 NN_O_TIME_SUM_RANGE_US['412_357'] = np.array([8.65, 8.70])
 NO_N_TIME_SUM_RANGE_US['560_500'] = np.array([8.57, 8.61])
 NN_O_TIME_SUM_RANGE_US['560_500'] = np.array([8.625, 8.675])
+
+NO_N_TIME_DIFF_RANGE_US = {}
+NN_O_TIME_DIFF_RANGE_US = {}
+NO_N_TIME_DIFF_RANGE_US['430_373'] = np.array([-1.8, -1.27])
+NN_O_TIME_DIFF_RANGE_US['430_373'] = np.array([-1.39, -0.82])
+NO_N_TIME_DIFF_RANGE_US['412_373'] = np.array([-1.8, -1.27])
+NN_O_TIME_DIFF_RANGE_US['412_373'] = np.array([-1.37, -0.86])
+NO_N_TIME_DIFF_RANGE_US['430_366'] = np.array([-1.8, -1.27])
+NN_O_TIME_DIFF_RANGE_US['430_366'] = np.array([-1.39, -0.82])
+NO_N_TIME_DIFF_RANGE_US['412_366'] = np.array([-1.8, -1.27])
+NN_O_TIME_DIFF_RANGE_US['412_366'] = np.array([-1.38, -0.84])
+NO_N_TIME_DIFF_RANGE_US['430_357'] = np.array([-1.81, -1.27])
+NN_O_TIME_DIFF_RANGE_US['430_357'] = np.array([-1.39, -0.82])
+NO_N_TIME_DIFF_RANGE_US['412_357'] = np.array([-1.81, -1.27])
+NN_O_TIME_DIFF_RANGE_US['412_357'] = np.array([-1.39, -0.82])
+NO_N_TIME_DIFF_RANGE_US['560_500'] = np.array([-1.8, -1.27])
+NN_O_TIME_DIFF_RANGE_US['560_500'] = np.array([-1.42, -0.82])
+
+# Make an x axis
+x_axis_mm = np.linspace(-23, 23, 2**8)
+
+# Define polar coordinate axis vectors
+r_axis_mm = np.linspace(0, 25, 2**9+1)[1::2]
+th_axis_rad = np.linspace(0, 2*np.pi, 2**8+1)[1::2]
+#th_axis_rad = np.linspace(2, 2.8, 2**7+1)[1::2]
