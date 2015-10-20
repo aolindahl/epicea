@@ -207,11 +207,11 @@ def get_radial_factors(data, r_axis_mm, th_axis_rad,
                     r_axis_mm[sl], e_rth_image[i_th, sl], n_lines=1)
 #                    params.add('skew_1', 0)
 
-                lmfit.minimize(
+                result = lmfit.minimize(
                     epicea.electron_calibration_helper.n_line_fit_model,
                     params, args=(r_axis_mm[sl], e_rth_image[i_th, sl]))
 
-                max_radius[i_th] = params['center_1'].value
+                max_radius[i_th] = result.params['center_1'].value
 
 #                    max_radius[i_th] = (
 #                        (e_rth_image[i_th, sl] *
@@ -349,9 +349,19 @@ def plot_projections(fig, data, straight_img, r_axis_mm, th_axis_rad, gas,
 
     if verbose:
         print('\nProjection fit report for {}.'.format(data.name()))
-        print(res.message)
-        print(res.ier)
-        print(res.lmdif_message)
+        # Not sure what is in the MinimizerResult, wrap stuff in try statements
+        try:
+            print(res.message)
+        except:
+            pass
+        try:
+            print(res.ier)
+        except:
+            pass
+        try:
+            print(res.lmdif_message)
+        except:
+            pass
         lmfit.report_fit(res)
 #        lmfit.ci_report(ci)
 #                lmfit.report_errors(params_r_proj)
@@ -370,7 +380,7 @@ def plot_projections(fig, data, straight_img, r_axis_mm, th_axis_rad, gas,
 #                                             r_axis_mm,
 #                                             **kws),
 #            'm--')
-    ax.plot(r_axis_mm, fit_funk(params, r_axis_mm, **kws), '--r')
+    ax.plot(r_axis_mm, fit_funk(res.params, r_axis_mm, **kws), '--r')
     plt.sca(ax)
     plt_func.tick_fontsize()
     plt_func.title_wrapper('straight ' + data.name())
